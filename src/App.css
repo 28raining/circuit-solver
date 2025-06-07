@@ -1,0 +1,63 @@
+.bg-navy {
+  background-color: rgb(37, 50, 64);
+}
+.bg-green {
+  background-color: rgb(184, 255, 241)
+}
+.bg-lightgreen {
+  background-color: rgb(231 255 250);
+}
+.schemHover:hover {
+  background-color: rgb(133, 203, 247);
+  cursor: pointer;
+}
+
+.noPointerClass{
+  pointer-events: none;
+}
+
+.katex { font-size: 3em !important; } 
+
+.bi {
+  display: inline-block;
+  vertical-align: -.125em;
+  fill: currentcolor;
+}
+
+.draw2d_InputPort {
+  fill: #F7F7F7;
+  stroke: #d7d7d7;
+}
+
+.draw2d_OutputPort {
+  fill: #F7F7F7;
+  stroke: #d7d7d7;
+}
+
+.visiojs_svg {
+  height: 600px;
+  width: 100%;
+}
+.visiojs_svg:focus {
+  outline: none; /* dark gray */
+}
+
+.visiojs_wire {
+  stroke-width: 5px;
+}
+
+.shape_path {
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: black;
+  fill: none;
+}
+
+.circuit_label {
+  font-size: 1.5em;
+  font-family: "Arial", monospace;
+  color: #000000;
+  text-anchor: middle;
+  dominant-baseline: text-after-edge;
+}

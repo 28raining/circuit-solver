@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="shape_path">
+  <path d="M16 64h32" />
+  <circle cx="80" cy="64" r="32" />
+</svg>

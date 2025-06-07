@@ -3,7 +3,6 @@
 2 - move to npm
 3 - add new user features
 -- default state can have 2x vout's
-4 - make it work on mobile and smaller devices
 
 
 - Add some self testing!
