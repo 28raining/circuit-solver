@@ -1,0 +1,9 @@
+
+<svg class="shape_path" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main wire going NE -->
+  <path d="M 10 90 L 40 60" />
+
+  <!-- Split into two wires -->
+  <path d="M 40 60 L 40 30" />
+  <path d="M 40 60 L 70 60" />
+</svg>

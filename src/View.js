@@ -229,7 +229,6 @@ export class View extends draw2d.Canvas {
         connections.push(newConn);
         id = id + 1;
       } else {
-        console.log(item)
         var type;
         var firstLetter = Array.from(item.id)[0];
 
@@ -244,13 +243,11 @@ export class View extends draw2d.Canvas {
         else if (firstLetter == "Y") type = "iprobe";
         else if (firstLetter == "o") type = "op";
         // console.log(item, type)
-        console.log('aa', type, item.x, item.y, item.id, item.angle)
         this.addShapeToSchem(type, item.x, item.y, item.id, item.angle);
-        console.log('bb')
       }
     });
 
-    console.log(connections);
+    // console.log(connections);
 
     var reader = new draw2d.io.json.Reader();
     reader.unmarshal(this, connections);

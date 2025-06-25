@@ -1,14 +1,27 @@
+8 - calculate button only appears when nodemap has changed, not when schematic changes
+9 - Capture ctrl-z
+14 - undo then calculate is wrong
+6 - circuit to url and toast to offer to reset it
+15 - run lint
+17 - fix mobile view
+18 - move bilinear under the plot
+11 - deleting shape and wire connecting 2 different shapes doesn't bring back the wire on undo
+12 - if using svg viewbox can you set the size?
+13 - remove pako from visiojs
+
 ## New todo with visiojs
 1 - Remove draw2d, replace with visiojs
 2 - move to npm
-3 - add new user features
+3 - add new user requested features
 -- default state can have 2x vout's
 4 - make it work on mobile and smaller devices
-
+5 - can't delete then add a new shape?
+6 - can we stop the scrolling during normal scroll?
+-- add a disable pan zoom button at top right
 
 - Add some self testing!
-- let algebrite do the parameter substitution so it can calculate abs with less issue
 - re-add solvable flag
+- add component selectors
 
 
 

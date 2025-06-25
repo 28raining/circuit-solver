@@ -11,7 +11,7 @@
 export default function simplify_algebra(expr) {
   var z = expr.replace(/([CRL]+)([0-9]*)/g, "$1_$2"); //Swap R0 for R_0 so this new library can consume it
   var matrix = ExpressionParser.parse(z);
-  var t = matrix.toString();
+  var t = matrix.toString(); //Converts to a latex string
   var t2 = t.replace(/([CRL]+)_([0-9]*)/g, "$1$2"); //Swap R_0 for R0 so this new library can consume it
 
   // console.log(matrix.toMathML());

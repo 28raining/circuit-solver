@@ -1,5 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" class="shape_path">
   <circle cx="64" cy="64" r="32" fill="#FFF" />
   <path stroke-width="2px" d="M64,64v-16m-8,8h16m-16,16h16" />
-  <path d="M64,32v-32m0,112v-16m0,16h22q10,0,4,8l-20,32q-6,8,-12,0l-20,-32q-6,-8,4,-8h22" />
+    <!-- First vertical line -->
+  <path d="M64,32 v-32" />
+
+  <!-- Second vertical line -->
+  <path d="M64,128 v-32" />
+  <polygon points="64,158 44,128 84,128" />
+  <!-- <path d="M64,32v-32m0,112v-16m0,16h22q10,0,4,8l-20,32q-6,8,-12,0l-20,-32q-6,-8,4,-8h22" /> -->
 </svg>
+
+
+
+  <!-- Triangle replacement -->
+  <!-- <polygon points="100,210 80,180 120,180" fill="black" /> -->
