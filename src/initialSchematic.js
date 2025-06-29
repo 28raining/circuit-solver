@@ -1,4 +1,4 @@
-export const initialState = {
+export const initialSchematic = {
   settings: {
     defaultZoom: 0.75,
     gridSize: 32,

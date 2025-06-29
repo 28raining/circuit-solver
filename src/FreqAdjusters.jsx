@@ -29,9 +29,9 @@ export function FreqAdjusters({ settings, setSettings }) {
 
   return (
     <Grid container spacing={2}>
-      {[['fmin', 'fmin_unit'], ['fmax', 'fmax_unit'], ['resolution', null]].map((key) => (
+      {[['fmin', 'fminUnit'], ['fmax', 'fmaxUnit'], ['resolution', null]].map((key) => (
         <Grid size={{xs:12, sm:6, md:4}} key={key[0]}>
-          <Card sx={{ p:1, m:1, width:"100%" }}>
+          <Card sx={{ p:1, m:1}}>
               <Stack direction="row" spacing={0} alignItems="center" sx={{ borderRadius: 1 }}>
                 <Typography variant="h5" sx={{ mr: 1 }}>
                   {key[0]}

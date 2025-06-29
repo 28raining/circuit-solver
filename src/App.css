@@ -5,7 +5,7 @@
   background-color: rgb(184, 255, 241)
 }
 .bg-lightgreen {
-  background-color: rgb(231 255 250);
+  background-color: rgb(231 255 250) !important;
 }
 .schemHover:hover {
   background-color: rgb(133, 203, 247);

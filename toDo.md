@@ -1,6 +1,4 @@
-15 - run lint
-11 - deleting shape and wire connecting 2 different shapes doesn't bring back the wire on undo
-6 - circuit to url and toast to offer to reset it
+- footer should have a link to git
 
 #visiojs todo
 - delete wire, redraw wire, then undo breaks

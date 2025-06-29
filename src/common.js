@@ -2,8 +2,8 @@ import { createTheme } from "@mui/material/styles";
 
 export const units = {
   resistor: { mΩ: 1e-3, Ω: 1, KΩ: 1e3, MΩ: 1e6, GΩ: 1e9 },
-  capacitor: { fF: 1e-15, pF: 1e-12, nF: 1e-9, μF: 1e-6, mF: 1e-3, F: 1 },
-  inductor: { fH: 1e-15, pH: 1e-12, nH: 1e-9, μH: 1e-6, mH: 1e-3, H: 1 },
+  capacitor: { fF: 1e-15, pF: 1e-12, nF: 1e-9, uF: 1e-6, mF: 1e-3, F: 1 },
+  inductor: { fH: 1e-15, pH: 1e-12, nH: 1e-9, uH: 1e-6, mH: 1e-3, H: 1 },
   frequency: { Hz: 1, kHz: 1e3, MHz: 1e6, GHz: 1e9, THz: 1e12 },
 };
 

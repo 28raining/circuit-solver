@@ -15,10 +15,11 @@ import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "./common.js"; // import your theme file
 
 import CircuitSolverSVG from "./assets/circuit-solver-icon.svg"; // import your SVG file
-import DownloadIcon from '@mui/icons-material/Download';
+// import DownloadIcon from '@mui/icons-material/Download';
+import SaveIcon from '@mui/icons-material/Save';
 import HomeIcon from '@mui/icons-material/Home';
 
-export function NavBar() {
+export function NavBar({stateToURL}) {
   const [urlSnackbar, setUrlSnackbar] = useState(false);
 
   return (
@@ -54,13 +55,14 @@ export function NavBar() {
                   color="bland"
                   //on user click then copy url to clipboard
                   onClick={() => {
-                    const url = window.location.href;
+                    const url = stateToURL();
+                    // const url = window.location.href;
                     navigator.clipboard.writeText(url).then(() => {
                       setUrlSnackbar(true);
                     });
                   }}
                 >
-                  <DownloadIcon />
+                  <SaveIcon />
                 </IconButton>
               </Tooltip>
             </div>

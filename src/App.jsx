@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 // import { startupSchematic } from "./startupSchematic.js";
 import pako from "pako";
@@ -13,73 +13,83 @@ import { calcBilinear } from "./new_solveMNA.js";
 import { NavBar } from "./NavBar.jsx";
 import { ChoseTF } from "./ChoseTF.jsx";
 import { DisplayMathML } from "./DisplayMathML.jsx";
+import Footer from "./Footer.jsx";
+import ReleaseNotes from "./ReleaseNotes.jsx";
 
 import { Comments } from "@hyvor/hyvor-talk-react";
 import MyChart from "./PlotTF.jsx";
-import Container from '@mui/material/Container';
+import Container from "@mui/material/Container";
+import Snackbar from "@mui/material/Snackbar";
+import SnackbarContent from "@mui/material/SnackbarContent";
 
 
-// import React from "https://unpkg.com/es-react@16.13.1/dev/react.js";
-// import ReactDOM from "https://unpkg.com/es-react@16.13.1/dev/react-dom.js";
-// import React from "https://unpkg.com/es-react@16.13.1/react.js";
-// import ReactDOM from "https://unpkg.com/es-react@16.13.1/react-dom.js";
-
-//RESET IT ERROR OCCURS!
-// window.onerror = function (message, file, line, col, error) {
-// alert("The web page has crashed! Damn. If you can please describe what happened in a comment...\n\n" + error.message);
-// window.location.href = location.protocol + '//' + location.host + location.pathname;
-// };
-
-// const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
-
-//Decode the URL before starting and REACT stuff
-// Extract the query parameter
-
-var initialState = {
-  elements: {
-    L0: {
-      value: 1,
-      unit: "u",
-      displayName: "L0",
-    },
-    R0: {
-      value: 10,
-      unit: "K",
-      displayName: "R0",
-    },
-    C0: {
-      value: 10,
-      unit: "f",
-      displayName: "C0",
-    },
-  },
-  fmin: {
+const initialComponents = {
+  L0: {
+    type: "inductor",
     value: 1,
-    unit: "M",
+    unit: "uH",
   },
-  fmax: {
-    value: 100,
-    unit: "G",
+  R0: {
+    type: "resistor",
+    value: 10,
+    unit: "KΩ",
   },
-  numSteps: 100,
-  // schematic: startupSchematic,
+  C0: {
+    type: "capacitor",
+    value: 10,
+    unit: "fF",
+  },
 };
-var startState = { ...initialState };
 
-const urlParams = new URLSearchParams(window.location.search);
-const encodedCompressed = urlParams.get("state");
-if (encodedCompressed) {
-  // Decode the Base64 string back into a Uint8Array
-  const compressedBinary = Uint8Array.from(atob(decodeURIComponent(encodedCompressed)), (char) => char.charCodeAt(0));
-  const decompressed = pako.inflate(compressedBinary, { to: "string" }); // Decompress the data using pako
-  const decodedObject = JSON.parse(decompressed); // Parse the decompressed JSON string into an object
+const initialSettings = {
+  fmin: 1,
+  fminUnit: "MHz",
+  fmax: 100,
+  fmaxUnit: "GHz",
+  resolution: 100,
+};
+import { initialSchematic } from "./initialSchematic.js";
+var urlContainsState = false; // Flag to check if URL contains state
 
-  if ("schematic" in decodedObject) startState.schematic = decodedObject.schematic;
-  if ("elements" in decodedObject) startState.elements = decodedObject.elements;
-  if ("fmin" in decodedObject) startState.fmin = decodedObject.fmin;
-  if ("fmax" in decodedObject) startState.fmax = decodedObject.fmax;
-  if ("numSteps" in decodedObject) startState.numSteps = decodedObject.numSteps;
+function stateFromURL() {
+  const url = new URL(window.location.href);
+  const componentsParam = url.searchParams.get("components");
+  const settingsParam = url.searchParams.get("settings");
+  const schematicParam = url.searchParams.get("schematic");
+
+  var modifiedComponents = initialComponents;
+  var modifiedSettings = initialSettings;
+  var modifiedSchematic = initialSchematic; // Default to initial schematic if no URL param is
+
+  if (componentsParam) {
+    urlContainsState = true; // Set the flag if components are present in the URL
+    modifiedComponents = componentsParam.split("__").reduce((acc, comp) => {
+      const [key, type, value, unit] = comp.split("_");
+      acc[key] = { type, value: parseFloat(value), unit };
+      return acc;
+    }, {});
+    // setComponentValues(componentsArray);
+  }
+  if (settingsParam) {
+    urlContainsState = true; // Set the flag if components are present in the URL
+
+    modifiedSettings = settingsParam.split("__").reduce((acc, setting) => {
+      const [key, value] = setting.split("_");
+      acc[key] = isNaN(value) ? value : parseFloat(value);
+      return acc;
+    }, {});
+  }
+  if (schematicParam) {
+    urlContainsState = true; // Set the flag if components are present in the URL
+
+    // Decode the Base64 string back into a Uint8Array
+    const compressedBinary = Uint8Array.from(atob(decodeURIComponent(schematicParam)), (char) => char.charCodeAt(0));
+    const decompressed = pako.inflate(compressedBinary, { to: "string" }); // Decompress the data using pako
+    modifiedSchematic = JSON.parse(decompressed); // Parse the decompressed JSON string into an object
+  }
+  return [modifiedComponents, modifiedSettings, modifiedSchematic];
 }
+const [modifiedComponents, modifiedSettings, modifiedSchematic] = stateFromURL();
 
 function new_calculate_tf(textResult, fRange, numSteps, components) {
   // console.log("new_calculate_tf", { textResult, fRange, numSteps, components });
@@ -122,66 +132,112 @@ function new_calculate_tf(textResult, fRange, numSteps, components) {
   return { freq_new: freq, mag_new: mag };
 }
 
-const initialComponents = {
-  L0: {
-    type: "inductor",
-    value: 1,
-    unit: "μH",
-  },
-  R0: {
-    type: "resistor",
-    value: 10,
-    unit: "KΩ",
-  },
-  C0: {
-    type: "capacitor",
-    value: 10,
-    unit: "fF",
-  },
-};
+function compToURL(key, value) {
+  return `${key}_${value.type}_${value.value}_${value.unit}`;
+}
 
 function App() {
   const [nodes, setNodes] = useState([]);
 
-  // const [textResult, setTextResult] = useState("");
   const [fullyConnectedComponents, setFullyConnectedComponents] = useState({});
-  // const [mathML, setMathML] = useState("");
-  // const [complexResponse, setComplexResponse] = useState("");
-  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", bilinearRaw:"", bilinearMathML: "" });
-  // const [components, setComponents] = useState({});
-  const [componentValues, setComponentValues] = useState(initialComponents);
-  // const [bilinearMathML, setBilinearMathML] = useState("");
-  // const [bilinearRaw, setBilinearRaw] = useState("");
-  const [settings, setSettings] = useState({
-    fmin: 1,
-    fmin_unit: "MHz",
-    fmax: 100,
-    fmax_unit: "GHz",
-    resolution: 100,
-  });
-  const fRange = { fmin: settings.fmin * units.frequency[settings.fmin_unit], fmax: settings.fmax * units.frequency[settings.fmax_unit] };
+  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", bilinearRaw: "", bilinearMathML: "" });
+  const [componentValues, setComponentValues] = useState(modifiedComponents);
+  const [settings, setSettings] = useState(modifiedSettings);
+  const [schemHistory, setSchemHistory] = useState({ pointer: 0, state: [modifiedSchematic] });
+  const [urlSnackbar, setUrlSnackbar] = useState(false);
+
+  const handleSnackbarClick = () => {
+    // setComponentValues({ ...initialComponents });
+    // setSettings({ ...initialSettings });
+    // setSchemHistory({pointer: 0, state: []});
+    // setUrlSnackbar(false);
+    window.location.href = window.location.origin + window.location.pathname;
+  };
+
+  //open the snackbar after 1 seconds if there is state in the URL
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (urlContainsState) {
+        setUrlSnackbar(true);
+      }
+    }, 1000); // 1 seconds
+    // Optional: Clean up the timer if the component unmounts early
+    return () => clearTimeout(timer);
+  }, []);
+
+  function LetUserKnowAboutURL() {
+    return (
+      <Snackbar
+        open={urlSnackbar}
+        autoHideDuration={10000}
+        onClose={() => setUrlSnackbar(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        message="This Snackbar will be dismissed in 5 seconds."
+      >
+        <SnackbarContent
+          message="Some settings were loaded from the URL. Please click here to reset to the default state."
+          sx={{
+            backgroundColor: "#2196f3",
+            color: "#fff",
+            cursor: "pointer", // Indicate clickable
+            maxWidth: 200,
+          }}
+          onClick={handleSnackbarClick}
+        />
+      </Snackbar>
+    );
+  }
+
+  const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
 
   const componentValuesSolved = {};
   for (const key in componentValues) componentValuesSolved[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
 
   const { freq_new, mag_new } = new_calculate_tf(results.complexResponse, fRange, settings.resolution, componentValuesSolved);
 
+  function stateToURL() {
+    const url = new URL(window.location.href);
+    url.searchParams.set(
+      "components",
+      Object.keys(componentValues)
+        .map((key) => compToURL(key, componentValues[key]))
+        .join("__")
+    );
+    url.searchParams.set(
+      "settings",
+      Object.keys(settings)
+        .map((key) => `${key}_${settings[key]}`)
+        .join("__")
+    );
+
+    const jsonString = JSON.stringify(schemHistory.state[schemHistory.pointer]);
+    const compressed = pako.deflate(jsonString, { to: "string" });
+    // Encode the compressed data to make it URL-safe
+    const encodedCompressed = encodeURIComponent(btoa(String.fromCharCode(...compressed)));
+    // Use URLSearchParams to set the compressed data
+    url.searchParams.set("schematic", encodedCompressed);
+
+    window.history.pushState({}, "", url.toString()); // Update the browser URL without reloading
+    return url.toString();
+  }
+
   function handleRequestBilin() {
     // console.log("handleRequestBilin", calcBilinear());
     const [raw, bilin] = calcBilinear();
     // setBilinearMathML(`<math>${bilin}</math>`);
     // setBilinearRaw(raw);
-    setResults({...results, bilinearRaw: raw, bilinearMathML: `<math>${bilin}</math>` });
+    setResults({ ...results, bilinearRaw: raw, bilinearMathML: `<math>${bilin}</math>` });
   }
-  console.log("render");
+  // console.log("render");
 
   // Update the DOM
   return (
     <>
-      <NavBar />
-      <div className="w-100 p-2 bg-green" key="wrapper">
+      <LetUserKnowAboutURL />
+      <NavBar stateToURL={stateToURL} />
+      <div className="w-100 p-2 bg-green pb-5" key="wrapper">
         {/* <div className="container-xl" key="topContainer"> */}
-          <Container maxWidth="xl" sx={{px:{xs:0,sm:2}}}>
+        <Container maxWidth="xl" sx={{ px: { xs: 0, sm: 2 } }}>
           <div className="row">
             <div className="col">
               <p className="my-0">
@@ -195,8 +251,8 @@ function App() {
               <VisioJSSchematic
                 setResults={setResults}
                 setNodes={setNodes}
-                // setComponents={setComponents}
-                // oldComponents={components}
+                history={schemHistory}
+                setHistory={setSchemHistory}
                 setComponentValues={setComponentValues}
                 setFullyConnectedComponents={setFullyConnectedComponents}
               />
@@ -221,10 +277,14 @@ function App() {
                 <div className="col-12">
                   <MyChart freq_new={freq_new} mag_new={mag_new} />
                 </div>
-                <div className="col-12">
-                  <FreqAdjusters settings={settings} setSettings={setSettings} />
-                </div>
-                <DisplayMathML title="Bilinear" textResult={results.bilinearRaw} mathML={results.bilinearMathML} handleRequestBilin={() => handleRequestBilin()} caclDone={results.text != ""} />
+                <FreqAdjusters settings={settings} setSettings={setSettings} />
+                <DisplayMathML
+                  title="Bilinear"
+                  textResult={results.bilinearRaw}
+                  mathML={results.bilinearMathML}
+                  handleRequestBilin={() => handleRequestBilin()}
+                  caclDone={results.text != ""}
+                />
               </>
             )}
           </div>
@@ -232,14 +292,11 @@ function App() {
           <div key="comments" className="row my-2 py-1 shadow-sm rounded bg-lightgreen">
             {!import.meta.env.DEV && <Comments website-id="12350" page-id="7" />}
           </div>
-          </Container>
+        </Container>
+        <ReleaseNotes />
         {/* </div> */}
       </div>
-      <div className="w-100 p-3 bg-navy text-white" key="cont_w100">
-        <div className="container-xl" key="cont">
-          git: https://github.com/28raining/circuit-solver
-        </div>
-      </div>
+      <Footer />
     </>
   );
 }
