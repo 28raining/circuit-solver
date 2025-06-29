@@ -28,7 +28,7 @@ export function createNodeMap(newState, addShapes) {
   //initialize every value in object to 0
   // for (const key in numConnections) numConnections[key] = 0;
 
-  var vout_node, start, end, nodeFound, index, node;
+  var start, end, nodeFound, index, node;
   var vin_node = null;
   for (const w of newState.wires) {
     if (w == null) continue; //skip deleted wires
@@ -59,8 +59,8 @@ export function createNodeMap(newState, addShapes) {
     }
     if (!nodeFound) nodeMapPre.push([start, end]);
   }
-  console.log("new node map", nodeMapPre);
-  console.log("components", components);
+  // console.log("new node map", nodeMapPre);
+  // console.log("components", components);
 
   //remove components that are not fully connected
   for (const [key, value] of Object.entries(components)) {
@@ -114,7 +114,7 @@ export function createNodeMap(newState, addShapes) {
   // for (i = 0; i < nodeArray.length; i++) {
   nodeMap.forEach((node, i) => {
     // for (j = 0; j < nodeArray[i].length; j++) {
-    node.forEach((comp, j) => {
+    node.forEach((comp) => {
       // element = comp.name;
       if (!(comp.name in fullyConnectedComponents)) {
         fullyConnectedComponents[comp.name] = {

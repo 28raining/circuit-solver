@@ -1,16 +1,18 @@
 import Snackbar from "@mui/material/Snackbar";
 import SnackbarContent from "@mui/material/SnackbarContent";
 import { MathMLToLaTeX } from "mathml-to-latex";
-import { useEffect, useState, useRef, createElement } from "react";
+import { useState } from "react";
+import Grid from "@mui/material/Grid";
+import Button from "@mui/material/Button";
 
 function DangerousSetIn({ mathMLString }) {
-  return <div dangerouslySetInnerHTML={{ __html: mathMLString }} />;
+  return <div style={{ textAlign: "center" }} dangerouslySetInnerHTML={{ __html: mathMLString }} />;
 }
 /*{<DangerousSetIn mathMLString={mathML} />}*/
-export function DisplayMathML({ laplace, bilinear, handleRequestBilin, textResult, bilinearRaw }) {
+export function DisplayMathML({ title, mathML, handleRequestBilin, textResult, caclDone }) {
   const [latexToast, setLatexToast] = useState(false);
   const [mathMLToast, setMathMLToast] = useState(false);
-  if (laplace == "") return null;
+  if (!caclDone) return null;
   //   if (tfType == "Laplace") return null;
   //   else if (tfType == "Bilinear") {
   //     return (
@@ -29,7 +31,7 @@ export function DisplayMathML({ laplace, bilinear, handleRequestBilin, textResul
   //   }
   // }
   return (
-    <div key="c1" className="col-12">
+    <>
       <Snackbar open={latexToast} autoHideDuration={10000} onClose={() => setLatexToast(false)} anchorOrigin={{ vertical: "top", horizontal: "right" }}>
         <SnackbarContent
           sx={{ backgroundColor: "black" }}
@@ -56,87 +58,71 @@ export function DisplayMathML({ laplace, bilinear, handleRequestBilin, textResul
           }
         />
       </Snackbar>
-      {[
-        { name: "Laplace", value: laplace },
-        { name: "Bilinear", value: bilinear },
-      ].map(({ name, value }) => (
-        <span key={name}>
-          <div key="r1" className="row">
-            <div key="title" className="col-6 text-start">
-              <h3>{name} Transform</h3>
-            </div>
-          </div>
-          <div key="r2" className="row text-center fs-3 py-2">
-            <div key="c1" className="col-10" style={{ overflow: "auto" }}>
-              {value == "" ? (
-                <div className="col">
-                  <button
-                    type="button"
-                    className="btn btn-outline-primary py-0"
-                    onClick={() => {
-                      handleRequestBilin();
-                    }}
-                  >
-                    Calculate bilinear transform
-                  </button>
-                </div>
-              ) : (
-                <DangerousSetIn mathMLString={value} />
-              )}
-            </div>
-            <div key="c2" className="col-2">
-              <div key="c3" className="d-grid gap-1">
-                <button
-                  type="button"
-                  className="btn btn-outline-primary py-0"
-                  onClick={() => {
-                    const newLatex = name=="Laplace" ? MathMLToLaTeX.convert(laplace) : MathMLToLaTeX.convert(bilinear);
-                    navigator.clipboard.writeText(newLatex);
-                    setLatexToast(true);
-                  }}
-                >
-                  Copy LaTeX
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline-primary py-0"
-                  onClick={() => {
-                    name=="Laplace" ? navigator.clipboard.writeText(laplace) :navigator.clipboard.writeText(bilinear);;
-                    setMathMLToast(true);
-                  }}
-                >
-                  Copy MathML
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline-primary py-0"
-                  onClick={() => {
-                    // const newLatex = MathML2LaTeX.convert(mathMlString);
-                    // name=="Laplace" ? navigator.clipboard.writeText(laplace) :navigator.clipboard.writeText(bilinear);;
-                    var encoded_latex = name=="Laplace" ? encodeURIComponent(textResult) : encodeURIComponent(bilinearRaw);
-                    var newURL = `https://www.wolframalpha.com/input?i2d=true&i=${encoded_latex}`;
-                    window.open(newURL, "_blank");
-                  }}
-                >
-                  Wolfram Alpha
-                </button>
-              </div>
-            </div>
-            {/* : html`<div className="col">
-              <button
-                type="button"
-                className="btn btn-outline-primary py-0"
-                onClick=${() => {
-                  props.handleRequestBilin();
-                }}
-              >
-                Calculate bilinear transform
-              </button>
-            </div>`} */}
-          </div>
-        </span>
-      ))}
-    </div>
+      <Grid container spacing={1}>
+        <Grid size={{xs:12, sm:10}}>
+        <Grid size={12} sx={{ my: 2 }}>
+          <h3>{title} Transform</h3>
+        </Grid>
+        <Grid size={12} style={{ overflow: "auto" }} sx={{ fontSize: "1.6em" }}>
+          {mathML == "" && title == "Bilinear" ? (
+            <Button
+              variant="contained"
+              color="info"
+              onClick={() => {
+                handleRequestBilin();
+              }}
+            >
+              Calculate bilinear transform
+            </Button>
+          ) : (
+            <DangerousSetIn mathMLString={mathML} />
+          )}
+        </Grid>
+        </Grid>
+        <Grid size={{xs:12, sm:2}}>
+          <Button
+            variant="outlined"
+            color="secondary"
+            fullWidth
+            sx={{ py: 0, my: 0.5 }}
+            onClick={() => {
+              const newLatex = MathMLToLaTeX.convert(mathML);
+              navigator.clipboard.writeText(newLatex);
+              setLatexToast(true);
+            }}
+          >
+            Copy LaTeX
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            fullWidth
+            sx={{ py: 0, my: 0.5 }}
+            onClick={() => {
+              navigator.clipboard.writeText(mathML);
+              setMathMLToast(true);
+            }}
+          >
+            Copy MathML
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            fullWidth
+            sx={{ py: 0, my: 0.5 }}
+            onClick={() => {
+              // const newLatex = MathML2LaTeX.convert(mathMlString);
+              // name=="Laplace" ? navigator.clipboard.writeText(mathML) :navigator.clipboard.writeText(bilinear);;
+              var encoded_latex = encodeURIComponent(textResult);
+              var newURL = `https://www.wolframalpha.com/input?i2d=true&i=${encoded_latex}`;
+              window.open(newURL, "_blank");
+            }}
+          >
+            Wolfram Alpha
+          </Button>
+        </Grid>
+      </Grid>
+    </>
   );
   // console.log(z);
   // return z;

@@ -1,13 +1,9 @@
-8 - calculate button only appears when nodemap has changed, not when schematic changes
-9 - Capture ctrl-z
-14 - undo then calculate is wrong
-6 - circuit to url and toast to offer to reset it
 15 - run lint
-17 - fix mobile view
-18 - move bilinear under the plot
 11 - deleting shape and wire connecting 2 different shapes doesn't bring back the wire on undo
-12 - if using svg viewbox can you set the size?
-13 - remove pako from visiojs
+6 - circuit to url and toast to offer to reset it
+
+#visiojs todo
+- delete wire, redraw wire, then undo breaks
 
 ## New todo with visiojs
 1 - Remove draw2d, replace with visiojs

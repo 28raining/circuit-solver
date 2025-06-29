@@ -30,7 +30,7 @@ export function ComponentAdjuster({ componentValues, setComponentValues }) {
   return (
     <Grid container spacing={2}>
       {Object.keys(componentValues).map((key) => (
-        <Grid item xs={12} sm={6} md={4} key={key}>
+        <Grid size={{md:3}} key={key}>
           <Card sx={{ p:1, m:1, width:"100%" }}>
               <Stack direction="row" spacing={0} alignItems="center" sx={{ borderRadius: 1 }}>
                 <Typography variant="h5" sx={{ mr: 1 }}>

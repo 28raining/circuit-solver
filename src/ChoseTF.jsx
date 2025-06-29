@@ -3,17 +3,18 @@ import Stack from "@mui/material/Stack";
 // import ToggleButton from "@mui/material/ToggleButton";
 // import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Box from "@mui/material/Box";
-import { useState } from "react";
-import { build_and_solve_mna, calcBilinear } from "./new_solveMNA.js";
+import Grid from "@mui/material/Grid";
+// import { useState } from "react";
+import { build_and_solve_mna } from "./new_solveMNA.js";
 
-
-export function ChoseTF({ textResult, setTextResult, setMathML, setComplexResponse, nodes, addShapes, fullyConnectedComponents, componentValuesSolved }) {
-  const [algebraic, setAlgebraic] = useState("algebraic");
+export function ChoseTF({ setResults, nodes, fullyConnectedComponents, componentValuesSolved }) {
+  // const [algebraic, setAlgebraic] = useState("algebraic");
+  const algebraic = "algebraic";
   const probes = [];
   const drivers = [];
   for (const c in fullyConnectedComponents) if (["vin", "iin"].includes(fullyConnectedComponents[c].type)) drivers.push(fullyConnectedComponents[c].type);
   for (const c in fullyConnectedComponents) if (["vprobe", "iprobe"].includes(fullyConnectedComponents[c].type)) probes.push(c);
-  console.log("probes", probes, fullyConnectedComponents);
+  // console.log("probes", probes, fullyConnectedComponents);
   //if there's 2 vprobes, add P1-P0 and P0-P1 to the probes object
   const vprobes = probes.filter((p) => fullyConnectedComponents[p].type == "vprobe");
   if (vprobes.length == 2) {
@@ -21,14 +22,15 @@ export function ChoseTF({ textResult, setTextResult, setMathML, setComplexRespon
     probes.push(`${vprobes[1]}-${vprobes[0]}`);
   }
 
-  //add a value field based on if user chose algebraic or numeric
+  // add a value field based on if user chose algebraic or numeric
+  const valueForAlgebra = {};
   for (const c in fullyConnectedComponents) {
-    if (algebraic == "numeric" && c in componentValuesSolved) fullyConnectedComponents[c].value = componentValuesSolved[c];
-    else fullyConnectedComponents[c].value = c;
+    if (algebraic == "numeric" && c in componentValuesSolved) valueForAlgebra[c] = componentValuesSolved[c];
+    else valueForAlgebra[c] = c;
   }
-  console.log("componentValuesSolved", componentValuesSolved, fullyConnectedComponents, algebraic);
+  // console.log("componentValuesSolved", componentValuesSolved, fullyConnectedComponents, algebraic);
   return (
-    <Box sx={{ display: "flex", justifyContent: "space-between", width: "100%", my: 1 }}>
+    <Grid container spacing={1} sx={{ mt: 1 }}>
       {drivers.length == 0 || probes.length == 0 ? (
         <Box sx={{ color: "red" }}>
           <p>
@@ -36,49 +38,52 @@ export function ChoseTF({ textResult, setTextResult, setMathML, setComplexRespon
           </p>
         </Box>
       ) : (
-        <Box display="flex" gap={1}>
-          <Stack spacing={2} direction="row" sx={{ alignItems: "center" }}>
-            <p>Calculate...</p>
-            {probes.map((p) => {
-              const int_probes = p.includes("-") ? p.split("-") : [p];
+        <>
+          <Grid size={12}>Calculate...</Grid>
 
-              return (
+          {probes.map((p) => {
+            const int_probes = p.includes("-") ? p.split("-") : [p];
+
+            return (
+              <Grid size={{ xs: 4, sm: 2, lg: 1 }} key={p}>
                 <Button
                   key={p}
                   variant="contained"
                   color="info"
+                  fullWidth
                   sx={{ py: 1, justifyContent: "center", fontSize: "1.4em" }}
                   onClick={() => {
-                    const [textResult, mathml, complex_response] = build_and_solve_mna(nodes, addShapes, int_probes, fullyConnectedComponents);
-                    const editedMathMl = `<math><mfrac><mrow><mi>${p}</mi></mrow><mrow><msub><mi>${drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${mathml}</math>`;
-                    setTextResult(textResult);
-                    setMathML(editedMathMl);
-                    setComplexResponse(complex_response);
+                    const [textResult, mathml, complex_response] = build_and_solve_mna(nodes.length, int_probes, fullyConnectedComponents, valueForAlgebra);
+                    const editedMathMl = `<math><mfrac><mrow><mi>${p}</mi></mrow><mrow><msub><mi>${
+                      drivers[0] == "vin" ? "V" : "I"
+                    }</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${mathml}</math>`;
+                    setResults({text: textResult, mathML: editedMathMl, complexResponse: complex_response, bilinearRaw: "", bilinearMathML: "" });
+                    // setTextResult(textResult);
+                    // setMathML(editedMathMl);
+                    // setComplexResponse(complex_response);
                   }}
                 >
-                  <Stack spacing={2} direction="row">
-                    <math xmlns="http://www.w3.org/1998/Math/MathML">
-                      <mfrac>
-                        <mi>{p}</mi>
-                        {drivers[0] == "vin" ? (
-                          <msub>
-                            <mi>V</mi>
-                            <mi>in</mi>
-                          </msub>
-                        ) : (
-                          <msub>
-                            <mi>I</mi>
-                            <mi>in</mi>
-                          </msub>
-                        )}
-                      </mfrac>
-                    </math>
-                  </Stack>
+                  <math xmlns="http://www.w3.org/1998/Math/MathML">
+                    <mfrac>
+                      <mi>{p}</mi>
+                      {drivers[0] == "vin" ? (
+                        <msub>
+                          <mi>V</mi>
+                          <mi>in</mi>
+                        </msub>
+                      ) : (
+                        <msub>
+                          <mi>I</mi>
+                          <mi>in</mi>
+                        </msub>
+                      )}
+                    </mfrac>
+                  </math>
                 </Button>
-              );
-            })}
-          </Stack>
-        </Box>
+              </Grid>
+            );
+          })}
+        </>
       )}
       {/* Enable this feature if this ticket gets solved! https://github.com/Yaffle/Expression/issues/15 */}
       {/* <Box display="flex" gap={1}>
@@ -87,6 +92,6 @@ export function ChoseTF({ textResult, setTextResult, setMathML, setComplexRespon
           <ToggleButton value="numeric">Numeric</ToggleButton>
         </ToggleButtonGroup>
       </Box> */}
-    </Box>
+    </Grid>
   );
 }

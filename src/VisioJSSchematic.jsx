@@ -1,6 +1,6 @@
 // import { visiojs } from "/visiojs/package/dist/visiojs.js";
 import { visiojs } from "visiojs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createNodeMap } from "./visiojs_to_matrix.js";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
@@ -8,8 +8,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import UndoIcon from "@mui/icons-material/Undo";
 import RedoIcon from "@mui/icons-material/Redo";
 import Box from "@mui/material/Box";
-import Tooltip from '@mui/material/Tooltip';
-
+import Tooltip from "@mui/material/Tooltip";
+import Grid from "@mui/material/Grid";
 
 import { initialState } from "./initialState.js";
 import { addShapes } from "./common.js";
@@ -49,32 +49,22 @@ function calculateNextIndex(components, type, prefix) {
   return `${prefix}${existingLabels.length == 0 ? 0 : Math.max(...existingLabels) + 1}`;
 }
 
-export function VisioJSSchematic({ setTextResult, setNodes, setComponents, oldComponents, setComponentValues, setFullyConnectedComponents }) {
-  const initializedRef = useRef(false);
+export function VisioJSSchematic({ setResults, setNodes, setComponentValues, setFullyConnectedComponents }) {
+  // const initializedRef = useRef(false);
   const [history, setHistory] = useState({ pointer: 0, state: [] });
   const [nextComponent, setNextComponent] = useState(initialLabels);
   const [vjs, setVjs] = useState(null);
+  const [oldComponents, setComponents] = useState({});
 
   const numUndos = 15;
 
-  const trackHistory = (newState) => {
-    console.log("state changed", newState);
-    setTextResult("");
-
-    setHistory((old_h) => {
-      const deepCopyState = JSON.parse(JSON.stringify(newState));
-      const h = { ...old_h };
-      //there was an undo, then a new state was created. Throwing away the future history
-      if (h.pointer < h.state.length - 1) h.state = h.state.slice(0, h.pointer + 1);
-      if (h.state.length == numUndos) h.state = [...h.state.slice(1), deepCopyState];
-      else h.state = [...h.state, deepCopyState];
-      h.pointer = h.state.length - 1;
-      return h;
-    });
-
-    console.log("newState", newState);
+  const regenerateNodeMaps = useCallback((newState) => {
+    // console.log("newState", newState);
     const { nodeMap, components, fullyConnectedComponents } = createNodeMap(newState, addShapes);
-    setFullyConnectedComponents(fullyConnectedComponents)
+
+    // console.log("nodeMap", nodeMap);
+    // console.log("components", components);
+    // console.log("fullyConnectedComponents", fullyConnectedComponents);
     // console.log("old c", {...components})
     //FIXME - remove these below lines
     for (const [key, value] of Object.entries(components)) {
@@ -90,25 +80,50 @@ export function VisioJSSchematic({ setTextResult, setNodes, setComponents, oldCo
       for (const key in newValues) {
         if (!(key in components)) delete newValues[key]; //remove components that are no longer present
       }
-
+      if (JSON.stringify(oldValues) == JSON.stringify(newValues)) return oldValues;
       return newValues;
     });
-    // for (const c in components)
-    // console.log("new c", {...components})
+
+    //if the state didn't change then return the same nodeMap to prevent re-rendering
+    setFullyConnectedComponents((old) => {
+      if (JSON.stringify(old) == JSON.stringify(fullyConnectedComponents)) return old;
+      return fullyConnectedComponents;
+    });
+    // setFullyConnectedComponents(fullyConnectedComponents)
+    setNodes((old) => {
+      if (JSON.stringify(old) == JSON.stringify(nodeMap)) return old;
+      else {
+        setResults({ text: "", mathML: "", complexResponse: "", bilinearRaw: "", bilinearMathML: "" });
+        return nodeMap;
+      }
+    });
 
     setComponents(components);
     //the keys of components are the names of the components. Find the next available name for each component type
-    console.log("components", components);
+    // console.log("components", components);
     const tempNewComponent = {};
     for (const key in shapesWithLabels) tempNewComponent[key] = calculateNextIndex(components, key, shapesWithLabels[key]);
     setNextComponent(tempNewComponent);
 
     //build the MNA matrix - do this after use clicks calculateMNA - FIXME
-    setNodes(nodeMap);
     // build_and_solve_mna(nodeMap, 'vin', addShapes )
-  };
+  }, [oldComponents,setComponentValues,setFullyConnectedComponents,setNodes,setResults])
 
-  function undo() {
+  const trackHistory = useCallback((newState) => {
+    setHistory((old_h) => {
+      const deepCopyState = JSON.parse(JSON.stringify(newState));
+      const h = { ...old_h };
+      //there was an undo, then a new state was created. Throwing away the future history
+      if (h.pointer < h.state.length - 1) h.state = h.state.slice(0, h.pointer + 1);
+      if (h.state.length == numUndos) h.state = [...h.state.slice(1), deepCopyState];
+      else h.state = [...h.state, deepCopyState];
+      h.pointer = h.state.length - 1;
+      return h;
+    });
+    regenerateNodeMaps(newState);
+  }, [regenerateNodeMaps]);
+
+  const undo = useCallback(() => {
     //when undo is called form useeffect it receives stale state. Therefore, all state accessing is done inside the setHistory function
     setHistory((old_h) => {
       if (old_h.pointer == 0) return old_h; //no more undos
@@ -117,9 +132,10 @@ export function VisioJSSchematic({ setTextResult, setNodes, setComponents, oldCo
       h.pointer = h.pointer - 1;
       return h;
     });
-  }
+    regenerateNodeMaps(history.state[history.pointer - 1]);
+  },[regenerateNodeMaps, setHistory, history, vjs]);
 
-  function redo() {
+  const redo = useCallback(() => {
     setHistory((old_h) => {
       if (old_h.pointer >= old_h.state.length - 1) return old_h; //no more redos
       vjs.redraw(old_h.state[old_h.pointer + 1]);
@@ -127,7 +143,8 @@ export function VisioJSSchematic({ setTextResult, setNodes, setComponents, oldCo
       h.pointer = h.pointer + 1;
       return h;
     });
-  }
+    regenerateNodeMaps(history.state[history.pointer + 1]);
+  },[regenerateNodeMaps, setHistory, history, vjs]);
 
   // useEffect(() => {
   //   //in react safe-mode this is executed twice which really breaks d3 event listeners & drag behavior. Using a ref to prevent double-initialization
@@ -145,42 +162,66 @@ export function VisioJSSchematic({ setTextResult, setNodes, setComponents, oldCo
       initialState: initialState,
       stateChanged: trackHistory,
     });
-    setVjs(newVjs);
-  }, []);
+    if (!vjs) setVjs(newVjs);
+  }, [trackHistory]);
 
   useEffect(() => {
     if (vjs) vjs.init();
   }, [vjs]);
 
+  //capture keypresses
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const isUndo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey;
+      const isRedo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && e.shiftKey;
+
+      if (isUndo) {
+        console.log("undo");
+        e.preventDefault(); // optional: prevent default browser undo
+        undo();
+      } else if (isRedo) {
+        e.preventDefault(); // optional: prevent default browser redo
+        redo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo]);
+
   const allowedToAdd = {};
-  allowedToAdd["vin"] = !('iin' in oldComponents || 'vin' in oldComponents);
+  allowedToAdd["vin"] = !("iin" in oldComponents || "vin" in oldComponents);
   allowedToAdd["vprobe"] = Object.keys(oldComponents).filter((k) => oldComponents[k].type == "vprobe").length < 2;
   // console.log("allowedToAdd", allowedToAdd);
   return (
-    <span>
-      <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-        <div style={{ width: "100%" }}>
-          <Box sx={{display:"flex", justifyContent:"space-between", width:"100%", my:1}}>
-            <Box display="flex" gap={1}>
-              {Object.keys(addShapes).map((key) => {
-                const shape = addShapes[key];
-                if ("label" in shape) shape.label.text = nextComponent[key];
-                return (
-                  <Tooltip title={key == "vin" && !allowedToAdd["vin"] ? "max 1 vin or iin " :
-                                  key == "iin" && !allowedToAdd["vin"] ? "max 1 vin or iin " :
-                                  key == "vprobe" && !allowedToAdd["vprobe"] ? "max 2 vprobes" :""
-                    }>
-                  <span key={key}>
+    <Grid container spacing={1} sx={{mt:1}}>
+      <Grid container size={{xs:12, sm:10}} columns={{xs:3,md:9}}>
+        {Object.keys(addShapes).map((key) => {
+          const shape = addShapes[key];
+          if ("label" in shape) shape.label.text = nextComponent[key];
+          return (
+            <Grid size={1} key={key}>
+              <Tooltip
+                key={key}
+                title={
+                  key == "vin" && !allowedToAdd["vin"]
+                    ? "max 1 vin or iin "
+                    : key == "iin" && !allowedToAdd["vin"]
+                    ? "max 1 vin or iin "
+                    : key == "vprobe" && !allowedToAdd["vprobe"]
+                    ? "max 2 vprobes"
+                    : ""
+                }
+              >
+                <span>
                   <Button
                     variant="contained"
+                    fullWidth
                     color={probes.includes(key) ? "secondary" : activeComponents.includes(key) ? "info" : "success"}
                     key={key}
                     style={{ cursor: "grab", marginRight: "10px", height: "100%" }}
                     size="small"
-                    disabled={key == "vin" ? !allowedToAdd["vin"] : 
-                              key == "iin" ? !allowedToAdd["vin"] :
-                              key == "vprobe" ? !allowedToAdd["vprobe"] : false
-                    }
+                    disabled={key == "vin" ? !allowedToAdd["vin"] : key == "iin" ? !allowedToAdd["vin"] : key == "vprobe" ? !allowedToAdd["vprobe"] : false}
                     draggable="true"
                     onDragStart={(e) => {
                       window.dragData = shape;
@@ -190,45 +231,38 @@ export function VisioJSSchematic({ setTextResult, setNodes, setComponents, oldCo
                   >
                     {key}
                   </Button>
-                  </span>
-                  </Tooltip>
-                );
-              })}
-            </Box>
-            <Box display="flex" gap={1}>
-              <IconButton aria-label="delete" onClick={() => vjs.deleteSelected()}>
-                <DeleteIcon />
-              </IconButton>
-              <IconButton aria-label="delete" onClick={() => undo()} disabled={history.pointer == 0}>
-                <UndoIcon />
-              </IconButton>
-              <IconButton aria-label="delete" onClick={() => redo()} disabled={(history.pointer == history.state.length - 1)}>
-                <RedoIcon />
-              </IconButton>
-              {/* <button style={{ display: "inline-block", marginRight: "10px" }} id="delete" onClick={() => vjs.deleteSelected()}>
-            Delete
-          </button>
-          <button style={{ display: "inline-block", marginRight: "10px" }} id="undo" disabled={history.pointer == 0} onClick={() => undo()}>
-            Undo
-          </button>
-          <button style={{ display: "inline-block" }} id="redo" disabled="${(history.pointer = history.state.length - 1)}" onClick={() => redo()}>
-            Redo
-          </button> */}
-            </Box>
-          </Box>
-          <div>
-            <div
-              style={{
-                border: "1px solid rgb(222, 226, 230)",
-                display: "inline-block",
-                width: "100%",
-              }}
-            >
-              <svg id="visiojs_top" className="visiojs_svg"></svg>
-            </div>
+                </span>
+              </Tooltip>
+            </Grid>
+          );
+        })}
+      </Grid>
+      <Grid container  size={{xs:12, sm:2}} spacing={0} justifyContent="flex-end">
+        {/* <Grid size={4}> */}
+          <IconButton aria-label="delete" onClick={() => vjs.deleteSelected()} sx={{p:0.5}}>
+            <DeleteIcon />
+          </IconButton>
+          <IconButton aria-label="delete" onClick={() => undo()} disabled={history.pointer == 0} sx={{p:0.5}}>
+            <UndoIcon />
+          </IconButton>
+          <IconButton aria-label="delete" onClick={() => redo()} disabled={history.pointer == history.state.length - 1} sx={{p:0.5}}>
+            <RedoIcon />
+          </IconButton>
+        {/* </Grid> */}
+      </Grid>
+      <Grid container size={12}>
+        <Grid size={12}>
+          <div
+            style={{
+              border: "1px solid rgb(222, 226, 230)",
+              display: "inline-block",
+              width: "100%",
+            }}
+          >
+            <svg id="visiojs_top" className="visiojs_svg"></svg>
           </div>
-        </div>
-      </div>
-    </span>
+        </Grid>
+      </Grid>
+    </Grid>
   );
 }

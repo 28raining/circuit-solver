@@ -130,15 +130,6 @@ export const theme = createTheme({
       dark: "#dedfe0",
       contrastText: "#242105",
     },
-  },
-  breakpoints: {
-    values: {
-      xs: 0,
-      sm: 700,
-      md: 950,
-      lg: 1400,
-      xl: 1700,
-    },
-  },
+  }
 });
 

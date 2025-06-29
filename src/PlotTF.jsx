@@ -33,7 +33,7 @@ const MyEChartsPlot = ({ freq_new, mag_new }) => {
       min: freq_new[0], // set your desired min frequency (Hz)
       max: freq_new[freq_new.length - 1], // set your desired max frequency (Hz)
       type: "log",
-      name: "frequency (Hz)",
+      name: "freq (Hz)",
       minorSplitLine: {
         show: true,
       },

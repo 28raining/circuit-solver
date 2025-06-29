@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./App.css";
-import { startupSchematic } from "./startupSchematic.js";
+// import { startupSchematic } from "./startupSchematic.js";
 import pako from "pako";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { VisioJSSchematic } from "./VisioJSSchematic.jsx";
@@ -9,14 +9,14 @@ import { FreqAdjusters } from "./FreqAdjusters.jsx";
 // import Grid from "@mui/material/Grid";
 import { units } from "./common.js";
 import { calcBilinear } from "./new_solveMNA.js";
-import { addShapes } from "./common.js";
 
 import { NavBar } from "./NavBar.jsx";
 import { ChoseTF } from "./ChoseTF.jsx";
 import { DisplayMathML } from "./DisplayMathML.jsx";
 
 import { Comments } from "@hyvor/hyvor-talk-react";
-import MyChart from "./PlotTF.jsx"
+import MyChart from "./PlotTF.jsx";
+import Container from '@mui/material/Container';
 
 
 // import React from "https://unpkg.com/es-react@16.13.1/dev/react.js";
@@ -62,7 +62,7 @@ var initialState = {
     unit: "G",
   },
   numSteps: 100,
-  schematic: startupSchematic,
+  // schematic: startupSchematic,
 };
 var startState = { ...initialState };
 
@@ -81,8 +81,9 @@ if (encodedCompressed) {
   if ("numSteps" in decodedObject) startState.numSteps = decodedObject.numSteps;
 }
 
-
 function new_calculate_tf(textResult, fRange, numSteps, components) {
+  // console.log("new_calculate_tf", { textResult, fRange, numSteps, components });
+  if (textResult == "") return { freq_new: [], mag_new: [] };
   var complex_freq = textResult;
   var rep;
   for (const key in components) {
@@ -122,34 +123,35 @@ function new_calculate_tf(textResult, fRange, numSteps, components) {
 }
 
 const initialComponents = {
-    "L0": {
-        "type": "inductor",
-        "value": 1,
-        "unit": "μH"
-    },
-    "R0": {
-        "type": "resistor",
-        "value": 10,
-        "unit": "KΩ"
-    },
-    "C0": {
-        "type": "capacitor",
-        "value": 10,
-        "unit": "fF"
-    }
-}
+  L0: {
+    type: "inductor",
+    value: 1,
+    unit: "μH",
+  },
+  R0: {
+    type: "resistor",
+    value: 10,
+    unit: "KΩ",
+  },
+  C0: {
+    type: "capacitor",
+    value: 10,
+    unit: "fF",
+  },
+};
 
 function App() {
   const [nodes, setNodes] = useState([]);
 
-  const [textResult, setTextResult] = useState("");
+  // const [textResult, setTextResult] = useState("");
   const [fullyConnectedComponents, setFullyConnectedComponents] = useState({});
-  const [mathML, setMathML] = useState("");
-  const [complexResponse, setComplexResponse] = useState("");
-  const [components, setComponents] = useState({});
+  // const [mathML, setMathML] = useState("");
+  // const [complexResponse, setComplexResponse] = useState("");
+  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", bilinearRaw:"", bilinearMathML: "" });
+  // const [components, setComponents] = useState({});
   const [componentValues, setComponentValues] = useState(initialComponents);
-  const [bilinearMathML, setBilinearMathML] = useState("");
-  const [bilinearRaw, setBilinearRaw] = useState("");
+  // const [bilinearMathML, setBilinearMathML] = useState("");
+  // const [bilinearRaw, setBilinearRaw] = useState("");
   const [settings, setSettings] = useState({
     fmin: 1,
     fmin_unit: "MHz",
@@ -162,71 +164,84 @@ function App() {
   const componentValuesSolved = {};
   for (const key in componentValues) componentValuesSolved[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
 
-  const { freq_new, mag_new } = new_calculate_tf(complexResponse, fRange, settings.resolution, componentValuesSolved);
+  const { freq_new, mag_new } = new_calculate_tf(results.complexResponse, fRange, settings.resolution, componentValuesSolved);
 
   function handleRequestBilin() {
-    console.log("handleRequestBilin", calcBilinear());
+    // console.log("handleRequestBilin", calcBilinear());
     const [raw, bilin] = calcBilinear();
-    setBilinearMathML(`<math>${bilin}</math>`);
-    setBilinearRaw(raw);
+    // setBilinearMathML(`<math>${bilin}</math>`);
+    // setBilinearRaw(raw);
+    setResults({...results, bilinearRaw: raw, bilinearMathML: `<math>${bilin}</math>` });
   }
+  console.log("render");
 
   // Update the DOM
-  return <>
-    <NavBar />
-    <div className="w-100 p-2 bg-green" key="wrapper">
-      <div className="container-xl" key="topContainer">
-        <div className="row">
-          <div className="col">
-            <p className="my-0">
-              This free online circuit solver tool can calculate the transfer function of circuits built from resistors, capacitors, inductors and op-amps. The user can quickly
-              explore different topologies and find their Laplace transform
-            </p>
+  return (
+    <>
+      <NavBar />
+      <div className="w-100 p-2 bg-green" key="wrapper">
+        {/* <div className="container-xl" key="topContainer"> */}
+          <Container maxWidth="xl" sx={{px:{xs:0,sm:2}}}>
+          <div className="row">
+            <div className="col">
+              <p className="my-0">
+                This free online circuit solver tool can calculate the transfer function of circuits built from resistors, capacitors, inductors and op-amps. The user can quickly
+                explore different topologies and find their Laplace transform
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="row shadow-sm rounded bg-lightgreen my-2 py-0" id="schematic">
-          <div className="col-12">
-            <VisioJSSchematic
-              setTextResult={setTextResult}
-              setNodes={setNodes}
-              setComponents={setComponents}
-              oldComponents={components}
-              setComponentValues={setComponentValues}
-              setFullyConnectedComponents={setFullyConnectedComponents}
+          <div className="row shadow-sm rounded bg-lightgreen my-2 py-0" id="schematic">
+            <div className="col-12">
+              <VisioJSSchematic
+                setResults={setResults}
+                setNodes={setNodes}
+                // setComponents={setComponents}
+                // oldComponents={components}
+                setComponentValues={setComponentValues}
+                setFullyConnectedComponents={setFullyConnectedComponents}
+              />
+            </div>
+            <div className="col-12">
+              <ComponentAdjuster componentValues={componentValues} setComponentValues={setComponentValues} />
+            </div>
+          </div>
+          <div className="row shadow-sm rounded bg-lightgreen my-2 py-3" id="schematic">
+            <ChoseTF
+              // setTextResult={setTextResult}
+              // setMathML={setMathML}
+              // setComplexResponse={setComplexResponse}
+              setResults={setResults}
+              nodes={nodes}
+              fullyConnectedComponents={fullyConnectedComponents}
+              componentValuesSolved={componentValuesSolved}
             />
+            {results.text != "" && (
+              <>
+                <DisplayMathML title="Laplace" textResult={results.text} mathML={results.mathML} caclDone={results.text != ""} />
+                <div className="col-12">
+                  <MyChart freq_new={freq_new} mag_new={mag_new} />
+                </div>
+                <div className="col-12">
+                  <FreqAdjusters settings={settings} setSettings={setSettings} />
+                </div>
+                <DisplayMathML title="Bilinear" textResult={results.bilinearRaw} mathML={results.bilinearMathML} handleRequestBilin={() => handleRequestBilin()} caclDone={results.text != ""} />
+              </>
+            )}
           </div>
-          <div className="col-12">
-            <ComponentAdjuster componentValues={componentValues} setComponentValues={setComponentValues} />
-          </div>
-        </div>
-        <div className="row shadow-sm rounded bg-lightgreen my-2 py-2" id="schematic">
-          <ChoseTF
-            textResult={textResult}
-            setTextResult={setTextResult}
-            setMathML={setMathML}
-            setComplexResponse={setComplexResponse}
-            nodes={nodes}
-            addShapes={addShapes}
-            fullyConnectedComponents={fullyConnectedComponents}
-            componentValuesSolved={componentValuesSolved}
-          />
-          {textResult!="" && <>
-          <DisplayMathML textResult={textResult} laplace={mathML} bilinear={bilinearMathML} bilinearRaw={bilinearRaw} handleRequestBilin={() => handleRequestBilin()} />
-          <div className="col-12">
-            <MyChart freq_new={freq_new} mag_new={mag_new} />
-          </div>
-          <div className="col-12">
-            <FreqAdjusters settings={settings} setSettings={setSettings} />
-          </div></>}
-        </div>
 
-        <div key="comments" className="row my-2 py-1 shadow-sm rounded bg-lightgreen">{!import.meta.env.DEV && <Comments website-id="12350" page-id="7" />}</div>
+          <div key="comments" className="row my-2 py-1 shadow-sm rounded bg-lightgreen">
+            {!import.meta.env.DEV && <Comments website-id="12350" page-id="7" />}
+          </div>
+          </Container>
+        {/* </div> */}
       </div>
-    </div>
-    <div className="w-100 p-3 bg-navy text-white" key="cont_w100">
-      <div className="container-xl" key="cont">git: https://github.com/28raining/circuit-solver</div>
-    </div>
-  </>
+      <div className="w-100 p-3 bg-navy text-white" key="cont_w100">
+        <div className="container-xl" key="cont">
+          git: https://github.com/28raining/circuit-solver
+        </div>
+      </div>
+    </>
+  );
 }
 
 export default App;

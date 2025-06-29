@@ -65,7 +65,7 @@ export function NavBar() {
               </Tooltip>
             </div>
 
-            <Stack spacing={1} direction={{ xs: "column", sm: "row" }}>
+            <Stack spacing={1} direction={{ sm: "column", xs:"column", md: "row" }}>
               <Button variant="contained" color="bland" component="a" href="https://www.will-kelsey.com">
                 <HomeIcon />
               </Button>
