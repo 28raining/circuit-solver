@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="shape_path">
+      <circle cx="64" cy="64" r="32" fill="#FFF" />
+    <!-- First vertical line -->
+  <path d="M64,32 v-32" />
+
+  <!-- Second vertical line -->
+  <path d="M64,128 v-32" />
+      <path stroke-width="2px" d="M64,80v-32m-12,20l12,12m0,0l12,-12" />
+        <polygon points="64,158 44,128 84,128" />
+
+</svg>

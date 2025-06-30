@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg"  class="shape_path">
+  <path d="m34,16l80,80l-80,80z" />
+  <path d="M58,76v-24m-12,12h24m-24,64h24" />
+  <path d="M2,128h28m-28,-64h28m80,32h20" />
+</svg>
