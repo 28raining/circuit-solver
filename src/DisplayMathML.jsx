@@ -59,27 +59,27 @@ export function DisplayMathML({ title, mathML, handleRequestBilin, textResult, c
         />
       </Snackbar>
       <Grid container spacing={1}>
-        <Grid size={{xs:12, sm:10}}>
-        <Grid size={12} sx={{ my: 2 }}>
-          <h3>{title} Transform</h3>
+        <Grid size={{ xs: 12, sm: 10 }}>
+          <Grid size={12} sx={{ my: 2 }}>
+            <h3>{title} Transform</h3>
+          </Grid>
+          <Grid size={12} style={{ overflow: "auto" }} sx={{ fontSize: "1.6em" }}>
+            {mathML == "" && title == "Bilinear" ? (
+              <Button
+                variant="contained"
+                color="info"
+                onClick={() => {
+                  handleRequestBilin();
+                }}
+              >
+                Calculate bilinear transform
+              </Button>
+            ) : (
+              <DangerousSetIn mathMLString={mathML} />
+            )}
+          </Grid>
         </Grid>
-        <Grid size={12} style={{ overflow: "auto" }} sx={{ fontSize: "1.6em" }}>
-          {mathML == "" && title == "Bilinear" ? (
-            <Button
-              variant="contained"
-              color="info"
-              onClick={() => {
-                handleRequestBilin();
-              }}
-            >
-              Calculate bilinear transform
-            </Button>
-          ) : (
-            <DangerousSetIn mathMLString={mathML} />
-          )}
-        </Grid>
-        </Grid>
-        <Grid size={{xs:12, sm:2}}>
+        <Grid size={{ xs: 12, sm: 2 }}>
           <Button
             variant="outlined"
             color="secondary"

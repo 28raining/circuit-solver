@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import "visiojs/dist/visiojs.css"; // Import VisioJS styles
 // import { startupSchematic } from "./startupSchematic.js";
 import pako from "pako";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -21,7 +22,6 @@ import MyChart from "./PlotTF.jsx";
 import Container from "@mui/material/Container";
 import Snackbar from "@mui/material/Snackbar";
 import SnackbarContent from "@mui/material/SnackbarContent";
-
 
 const initialComponents = {
   L0: {
@@ -201,13 +201,13 @@ function App() {
       "components",
       Object.keys(componentValues)
         .map((key) => compToURL(key, componentValues[key]))
-        .join("__")
+        .join("__"),
     );
     url.searchParams.set(
       "settings",
       Object.keys(settings)
         .map((key) => `${key}_${settings[key]}`)
-        .join("__")
+        .join("__"),
     );
 
     const jsonString = JSON.stringify(schemHistory.state[schemHistory.pointer]);

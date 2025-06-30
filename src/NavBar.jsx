@@ -16,10 +16,10 @@ import { theme } from "./common.js"; // import your theme file
 
 import CircuitSolverSVG from "./assets/circuit-solver-icon.svg"; // import your SVG file
 // import DownloadIcon from '@mui/icons-material/Download';
-import SaveIcon from '@mui/icons-material/Save';
-import HomeIcon from '@mui/icons-material/Home';
+import SaveIcon from "@mui/icons-material/Save";
+import HomeIcon from "@mui/icons-material/Home";
 
-export function NavBar({stateToURL}) {
+export function NavBar({ stateToURL }) {
   const [urlSnackbar, setUrlSnackbar] = useState(false);
 
   return (
@@ -44,7 +44,7 @@ export function NavBar({stateToURL}) {
       <Box sx={{ flexGrow: 1 }}>
         <AppBar position="static" sx={{ backgroundColor: "rgb(37, 50, 64)", py: 1 }}>
           <Toolbar style={{ minHeight: 0 }}>
-            <img src={CircuitSolverSVG} alt="Smith Chart" width="30" height="30" style={{ marginRight: "12px"}} />
+            <img src={CircuitSolverSVG} alt="Smith Chart" width="30" height="30" style={{ marginRight: "12px" }} />
             <Typography variant="h6" component="div" sx={{ fontWeight: "bold", display: { xs: "none", sm: "block" } }}>
               ONLINE CIRCUIT SOLVER
             </Typography>
@@ -67,7 +67,7 @@ export function NavBar({stateToURL}) {
               </Tooltip>
             </div>
 
-            <Stack spacing={1} direction={{ sm: "column", xs:"column", md: "row" }}>
+            <Stack spacing={1} direction={{ sm: "column", xs: "column", md: "row" }}>
               <Button variant="contained" color="bland" component="a" href="https://www.will-kelsey.com">
                 <HomeIcon />
               </Button>

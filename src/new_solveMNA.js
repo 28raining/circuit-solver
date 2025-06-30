@@ -117,7 +117,7 @@ export function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedComponen
           const voutNode2 = elementMap[chosenPlot[1]].ports[0];
           if (iinOrVin == "vin")
             Algebrite.eval(
-              `mna_vo_vi = inv_mna[${voutNode1 + 1}][${mnaMatrix.length - numOpAmps - numIprb}] - inv_mna[${voutNode2 + 1}][${mnaMatrix.length - numOpAmps - numIprb}]`
+              `mna_vo_vi = inv_mna[${voutNode1 + 1}][${mnaMatrix.length - numOpAmps - numIprb}] - inv_mna[${voutNode2 + 1}][${mnaMatrix.length - numOpAmps - numIprb}]`,
             );
           else Algebrite.eval(`mna_vo_vi = inv_mna[${voutNode1 + 1}][${iinNode + 1}] - inv_mna[${voutNode2 + 1}][${iinNode + 1}]`);
         }

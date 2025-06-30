@@ -6,7 +6,7 @@
 // import "../js/expression/toMathML.js";
 
 // import {ExpressionParser} from './node_modules/@yaffle/expression/index.js';
-  import {ExpressionParser, Polynomial, Expression} from '@yaffle/expression';
+import { ExpressionParser, Polynomial, Expression } from "@yaffle/expression";
 
 export default function simplify_algebra(expr) {
   var z = expr.replace(/([CRL]+)([0-9]*)/g, "$1_$2"); //Swap R0 for R_0 so this new library can consume it

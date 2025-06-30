@@ -115,7 +115,10 @@ export const addShapes = {
       x: -64,
       y: -36,
     },
-    connectors: [[-64, 0],[64, 0]],
+    connectors: [
+      [-64, 0],
+      [64, 0],
+    ],
     x: 0,
     y: 0,
     offset: [-96, -64],
@@ -130,6 +133,5 @@ export const theme = createTheme({
       dark: "#dedfe0",
       contrastText: "#242105",
     },
-  }
+  },
 });
-

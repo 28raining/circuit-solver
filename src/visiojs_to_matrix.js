@@ -13,15 +13,15 @@ export function createNodeMap(newState, addShapes) {
   var nodeMapPre = [];
   //use this object to track how many connections each component has
   const components = {};
-        const fullyConnectedComponents = {};
+  const fullyConnectedComponents = {};
 
   var nodeMap = [];
   newState.shapes.map((s) => {
     if (s === null) return; //skip deleted shapes
-    if (!('connectors' in s)) return; //skip shapes without connectors
+    if (!("connectors" in s)) return; //skip shapes without connectors
     var z = elementMapper(s);
     //use portConnections because a cap can have 2 wires to 1 port. We need to check every port is connected...
-    components[z.name] = { type: z.type, portConnections: Array(s.connectors.length).fill(false) }; 
+    components[z.name] = { type: z.type, portConnections: Array(s.connectors.length).fill(false) };
   });
 
   // const numConnections = Object.fromEntries(components.map(s=>s.name));
@@ -82,7 +82,7 @@ export function createNodeMap(newState, addShapes) {
   }
   if (vin_node !== null) {
     // console.error("No vin or vout node found in the node map");
-  // } else {
+    // } else {
     var connected_nodes = [vin_node];
     var connected_elements = nodeMapPre[vin_node].map((c) => c.name);
     var pushed;
@@ -95,9 +95,7 @@ export function createNodeMap(newState, addShapes) {
           if (connected_elements.includes(conn.name)) {
             if (!pushed) connected_nodes.push(node);
             pushed = true;
-            connected_elements.push(
-              ...nodeMapPre[node].map((c) => c.name).filter((c) => !connected_elements.includes(c))
-            );
+            connected_elements.push(...nodeMapPre[node].map((c) => c.name).filter((c) => !connected_elements.includes(c)));
             // break; //break to avoid checking the rest of the connections
           }
         }
@@ -107,37 +105,35 @@ export function createNodeMap(newState, addShapes) {
     // console.log("connected elements to vin", connected_elements);
 
     // const nodeMap = nodeMapPre.filter(node => connected_nodes.includes(node));
-    nodeMap = connected_nodes.map(node => nodeMapPre[node]);
+    nodeMap = connected_nodes.map((node) => nodeMapPre[node]);
     // console.log("final node map", nodeMap);
     //find all nodes that have a path to vin_node
 
-  // for (i = 0; i < nodeArray.length; i++) {
-  nodeMap.forEach((node, i) => {
-    // for (j = 0; j < nodeArray[i].length; j++) {
-    node.forEach((comp) => {
-      // element = comp.name;
-      if (!(comp.name in fullyConnectedComponents)) {
-        fullyConnectedComponents[comp.name] = {
-          ports: Array(addShapes[comp.type].connectors.length).fill(null),
-          type: comp.type,
-        };
-      }
-      fullyConnectedComponents[comp.name].ports[comp.port] = i;
+    // for (i = 0; i < nodeArray.length; i++) {
+    nodeMap.forEach((node, i) => {
+      // for (j = 0; j < nodeArray[i].length; j++) {
+      node.forEach((comp) => {
+        // element = comp.name;
+        if (!(comp.name in fullyConnectedComponents)) {
+          fullyConnectedComponents[comp.name] = {
+            ports: Array(addShapes[comp.type].connectors.length).fill(null),
+            type: comp.type,
+          };
+        }
+        fullyConnectedComponents[comp.name].ports[comp.port] = i;
 
-      // //FIXME - can these maps be eliminated now fullyConnectedComponents is more detailed?
-      // if (comp.type == "opamp") {
-      //   if (!(comp.name in opAmpsMap)) opAmpsMap[comp.name] = [null, null, null];
-      //   opAmpsMap[comp.name][comp.port] = i;
-      // // } else if (comp.type == "iprobe") {
-      // //   if (!(comp.name in iprbMap)) iprbMap[comp.name] = [null, null];
-      // //   iprbMap[comp.name][comp.port] = i;
-      // //   if (comp.port == 0) iprbNode = i;
-      // }
+        // //FIXME - can these maps be eliminated now fullyConnectedComponents is more detailed?
+        // if (comp.type == "opamp") {
+        //   if (!(comp.name in opAmpsMap)) opAmpsMap[comp.name] = [null, null, null];
+        //   opAmpsMap[comp.name][comp.port] = i;
+        // // } else if (comp.type == "iprobe") {
+        // //   if (!(comp.name in iprbMap)) iprbMap[comp.name] = [null, null];
+        // //   iprbMap[comp.name][comp.port] = i;
+        // //   if (comp.port == 0) iprbNode = i;
+        // }
+      });
     });
-  });
-
   }
 
-
-  return {nodeMap, components, fullyConnectedComponents};
+  return { nodeMap, components, fullyConnectedComponents };
 }

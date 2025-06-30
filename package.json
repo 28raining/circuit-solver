@@ -7,7 +7,8 @@
     "dev": "vite --host",
     "build": "vite build",
     "lint": "eslint src",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prettier": "prettier src --write"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -18,17 +19,13 @@
     "@yaffle/expression": "^0.0.47",
     "algebrite": "^1.4.0",
     "bootstrap": "^5.3.6",
-    "chart.js": "^4.5.0",
-    "chartjs-plugin-crosshair": "^2.0.0",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
     "mathml-to-latex": "^1.5.0",
     "pako": "^2.1.0",
     "react": "^19.1.0",
-    "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
-    "uplot": "^1.6.32",
-    "visiojs": "file:../visiojs/package"
+    "visiojs": "^0.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
@@ -39,6 +36,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "prettier": "^3.6.2",
     "rollup-plugin-visualizer": "^6.0.3",
     "uplot-react": "^1.2.2",
     "vite": "^6.3.5",

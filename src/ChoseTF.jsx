@@ -57,7 +57,7 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
                     const editedMathMl = `<math><mfrac><mrow><mi>${p}</mi></mrow><mrow><msub><mi>${
                       drivers[0] == "vin" ? "V" : "I"
                     }</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${mathml}</math>`;
-                    setResults({text: textResult, mathML: editedMathMl, complexResponse: complex_response, bilinearRaw: "", bilinearMathML: "" });
+                    setResults({ text: textResult, mathML: editedMathMl, complexResponse: complex_response, bilinearRaw: "", bilinearMathML: "" });
                     // setTextResult(textResult);
                     // setMathML(editedMathMl);
                     // setComplexResponse(complex_response);

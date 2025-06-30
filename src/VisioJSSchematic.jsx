@@ -101,7 +101,7 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
       //build the MNA matrix - do this after use clicks calculateMNA - FIXME
       // build_and_solve_mna(nodeMap, 'vin', addShapes )
     },
-    [oldComponents, setComponentValues, setFullyConnectedComponents, setNodes, setResults]
+    [oldComponents, setComponentValues, setFullyConnectedComponents, setNodes, setResults],
   );
 
   const trackHistory = useCallback(
@@ -118,7 +118,7 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
       });
       regenerateNodeMaps(newState);
     },
-    [regenerateNodeMaps]
+    [regenerateNodeMaps, setHistory],
   );
 
   const undo = useCallback(() => {
@@ -156,12 +156,14 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
   // });
 
   useEffect(() => {
-    var newVjs = visiojs({
-      initialState: history.state[0],
-      stateChanged: trackHistory,
-    });
-    if (!vjs) setVjs(newVjs);
-  }, [trackHistory]);
+    if (!vjs) {
+      var newVjs = visiojs({
+        initialState: history.state[0],
+        stateChanged: trackHistory,
+      });
+      setVjs(newVjs);
+    }
+  }, [trackHistory, history, vjs]);
 
   useEffect(() => {
     if (vjs) vjs.init();
@@ -205,10 +207,10 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
                   key == "vin" && !allowedToAdd["vin"]
                     ? "max 1 vin or iin "
                     : key == "iin" && !allowedToAdd["vin"]
-                    ? "max 1 vin or iin "
-                    : key == "vprobe" && !allowedToAdd["vprobe"]
-                    ? "max 2 vprobes"
-                    : ""
+                      ? "max 1 vin or iin "
+                      : key == "vprobe" && !allowedToAdd["vprobe"]
+                        ? "max 2 vprobes"
+                        : ""
                 }
               >
                 <span>
