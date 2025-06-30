@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -21,11 +21,22 @@
         "name": "Free Online Circuit Solver Tool",
         "url": "https://onlinecircuitsolver.com/",
         "description": "Build schematics and find their transfer functions. See the Laplace equation and plot it vs frequency. Supports resistors, capacitors, inductors, op-amps, and more.",
-        "applicationCategory": "Utility",
+        "applicationCategory": "Utility"
       }
     </script>
     <title>Circuit Solver</title>
   </head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-EKCV177E7P"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-EKCV177E7P");
+  </script>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
