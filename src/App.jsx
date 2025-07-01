@@ -263,9 +263,6 @@ function App() {
           </div>
           <div className="row shadow-sm rounded bg-lightgreen my-2 py-3" id="schematic">
             <ChoseTF
-              // setTextResult={setTextResult}
-              // setMathML={setMathML}
-              // setComplexResponse={setComplexResponse}
               setResults={setResults}
               nodes={nodes}
               fullyConnectedComponents={fullyConnectedComponents}
@@ -288,13 +285,13 @@ function App() {
               </>
             )}
           </div>
-
+          <div key="releaseNotes" className="row my-2 py-1 shadow-sm rounded bg-lightgreen">
+            <ReleaseNotes />
+          </div>
           <div key="comments" className="row my-2 py-1 shadow-sm rounded bg-lightgreen">
             {!import.meta.env.DEV && <Comments website-id="12350" page-id="7" />}
           </div>
         </Container>
-        <ReleaseNotes />
-        {/* </div> */}
       </div>
       <Footer />
     </>

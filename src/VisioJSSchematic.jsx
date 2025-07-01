@@ -100,6 +100,9 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
 
       //build the MNA matrix - do this after use clicks calculateMNA - FIXME
       // build_and_solve_mna(nodeMap, 'vin', addShapes )
+      // console.log("nodemap", nodeMap);
+      // console.log("fullyConnectedComponents", fullyConnectedComponents, components);
+
     },
     [oldComponents, setComponentValues, setFullyConnectedComponents, setNodes, setResults],
   );
@@ -143,17 +146,6 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
     });
     regenerateNodeMaps(history.state[history.pointer + 1]);
   }, [regenerateNodeMaps, setHistory, history, vjs]);
-
-  // useEffect(() => {
-  //   //in react safe-mode this is executed twice which really breaks d3 event listeners & drag behavior. Using a ref to prevent double-initialization
-  //   if (initializedRef.current) return;
-  //   initializedRef.current = true;
-  //   vjs = visiojs({
-  //     initialState: initialState,
-  //     stateChanged: trackHistory,
-  //   });
-  //   vjs.init();
-  // });
 
   useEffect(() => {
     if (!vjs) {

@@ -30,6 +30,7 @@ export function createNodeMap(newState, addShapes) {
 
   var start, end, nodeFound, index, node;
   var vin_node = null;
+  var crushedNodes = [];
   for (const w of newState.wires) {
     if (w == null) continue; //skip deleted wires
     const startEl = elementMapper(newState.shapes[w.start.shapeID]);
@@ -39,28 +40,88 @@ export function createNodeMap(newState, addShapes) {
     end = { ...endEl, port: w.end.connectorID };
     components[startEl.name].portConnections[w.start.connectorID] = true;
     components[endEl.name].portConnections[w.end.connectorID] = true;
+    crushedNodes.push([start, end])
 
-    if (startEl.type == "gnd" || endEl.type == "gnd") continue; //don't add ground nodes to the node map
+    // if (startEl.type == "gnd" || endEl.type == "gnd") continue; //don't add ground nodes to the node map
 
-    nodeFound = false;
-    for (index in nodeMapPre) {
-      node = nodeMapPre[index];
+    // nodeFound = false;
+    // for (index in nodeMapPre) {
+    //   node = nodeMapPre[index];
+    //   for (const conn_index in node) {
+    //     const conn = node[conn_index];
+    //     if (conn.name == start.name && conn.port == start.port) {
+    //       nodeMapPre[index].push(end);
+    //       nodeFound = true;
+    //     } else if (conn.name == end.name && conn.port == end.port) {
+    //       nodeMapPre[index].push(start);
+    //       nodeFound = true;
+    //     }
+    //   }
+    // }
+    // if (!nodeFound) nodeMapPre.push([start, end]);
+  }
+  // console.log("new node map",  JSON.parse(JSON.stringify(nodeMapPre)));
 
-      for (const conn_index in node) {
-        const conn = node[conn_index];
-        if (conn.name == start.name && conn.port == start.port) {
-          nodeMapPre[index].push(end);
-          nodeFound = true;
-        } else if (conn.name == end.name && conn.port == end.port) {
-          nodeMapPre[index].push(start);
-          nodeFound = true;
+  var wasChanged
+  do {
+    wasChanged = false;
+    outerLoop: for (index in crushedNodes) {
+      // node = crushedNodes[index];
+      for (const conn_index in crushedNodes[index]) {
+        const conn = crushedNodes[index][conn_index];
+        //check if conn exists in any other node, then merge the nodes
+        for (const nodeIndex in crushedNodes) {
+          if (nodeIndex == index) continue; //skip the current node
+          const node = crushedNodes[nodeIndex];
+          for (const conn2_index in node) {
+            const conn2 = node[conn2_index];
+            if (conn.name == conn2.name && conn.port == conn2.port) {
+              // console.log("found a match", conn, conn2, "in node", node);
+              //merge the nodes
+              // if (nodeIndex != index) {
+                // console.log("merging nodes", index, "and", nodeIndex);
+                crushedNodes[nodeIndex] = [...crushedNodes[nodeIndex], ...crushedNodes[index]];
+                crushedNodes.splice(index, 1);
+                wasChanged = true;
+                break outerLoop; //break to avoid checking the rest of the connections
+              // }
+            }
+          }
         }
       }
     }
-    if (!nodeFound) nodeMapPre.push([start, end]);
+
+  } while (wasChanged);
+
+  //delete the node containing gnd
+  outerLoop : for (const index in crushedNodes) {
+    const node = crushedNodes[index];
+    for (const conn of node) {
+      if (conn.type == "gnd") {
+        // console.log("found gnd node", node, "at index", index);
+        crushedNodes.splice(index, 1);
+        break outerLoop; //break to avoid checking the rest of the connections
+      }
+    }
   }
-  // console.log("new node map", nodeMapPre);
-  // console.log("components", components);
+
+  //remove duplicates from crushedNodes
+  for (const n in crushedNodes) {
+    for (let i = 0; i < crushedNodes[n].length; i++) {
+      const conn = crushedNodes[n][i];
+      for (let j = i + 1; j < crushedNodes[n].length; j++) {
+        const conn2 = crushedNodes[n][j];
+        // console.log("conns", conn, conn2);
+        if (conn.name == conn2.name && conn.port == conn2.port) {
+          // console.log("found a duplicate", conn, "in node", crushedNodes[n]);
+          crushedNodes[n].splice(j, 1); //remove the duplicate
+          j--; //decrement j to account for the removed element
+        }
+      }
+    }
+  }
+  // console.log("crushedNodes", crushedNodes);
+  nodeMapPre = crushedNodes;
 
   //remove components that are not fully connected
   for (const [key, value] of Object.entries(components)) {
@@ -105,6 +166,7 @@ export function createNodeMap(newState, addShapes) {
     // console.log("connected elements to vin", connected_elements);
 
     // const nodeMap = nodeMapPre.filter(node => connected_nodes.includes(node));
+    // console.log("pre map", nodeMapPre)
     nodeMap = connected_nodes.map((node) => nodeMapPre[node]);
     // console.log("final node map", nodeMap);
     //find all nodes that have a path to vin_node
@@ -121,16 +183,6 @@ export function createNodeMap(newState, addShapes) {
           };
         }
         fullyConnectedComponents[comp.name].ports[comp.port] = i;
-
-        // //FIXME - can these maps be eliminated now fullyConnectedComponents is more detailed?
-        // if (comp.type == "opamp") {
-        //   if (!(comp.name in opAmpsMap)) opAmpsMap[comp.name] = [null, null, null];
-        //   opAmpsMap[comp.name][comp.port] = i;
-        // // } else if (comp.type == "iprobe") {
-        // //   if (!(comp.name in iprbMap)) iprbMap[comp.name] = [null, null];
-        // //   iprbMap[comp.name][comp.port] = i;
-        // //   if (comp.port == 0) iprbNode = i;
-        // }
       });
     });
   }
