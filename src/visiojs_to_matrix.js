@@ -28,7 +28,7 @@ export function createNodeMap(newState, addShapes) {
   //initialize every value in object to 0
   // for (const key in numConnections) numConnections[key] = 0;
 
-  var start, end, nodeFound, index, node;
+  var start, end, index;
   var vin_node = null;
   var crushedNodes = [];
   for (const w of newState.wires) {

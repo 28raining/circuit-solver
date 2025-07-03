@@ -1,4 +1,3 @@
-- footer should have a link to git
 
 #visiojs todo
 - delete wire, redraw wire, then undo breaks
