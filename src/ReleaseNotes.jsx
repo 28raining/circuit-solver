@@ -41,7 +41,7 @@ function ReleaseNotes() {
                   <Typography>v2.0</Typography>
                 </TableCell>
                 <TableCell>
-                  <Typography>May 2025</Typography>
+                  <Typography>July 2025</Typography>
                 </TableCell>
                 <TableCell>
                   <ul>
