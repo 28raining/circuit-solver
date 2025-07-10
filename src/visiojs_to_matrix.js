@@ -40,7 +40,7 @@ export function createNodeMap(newState, addShapes) {
     end = { ...endEl, port: w.end.connectorID };
     components[startEl.name].portConnections[w.start.connectorID] = true;
     components[endEl.name].portConnections[w.end.connectorID] = true;
-    crushedNodes.push([start, end])
+    crushedNodes.push([start, end]);
 
     // if (startEl.type == "gnd" || endEl.type == "gnd") continue; //don't add ground nodes to the node map
 
@@ -62,7 +62,7 @@ export function createNodeMap(newState, addShapes) {
   }
   // console.log("new node map",  JSON.parse(JSON.stringify(nodeMapPre)));
 
-  var wasChanged
+  var wasChanged;
   do {
     wasChanged = false;
     outerLoop: for (index in crushedNodes) {
@@ -79,22 +79,21 @@ export function createNodeMap(newState, addShapes) {
               // console.log("found a match", conn, conn2, "in node", node);
               //merge the nodes
               // if (nodeIndex != index) {
-                // console.log("merging nodes", index, "and", nodeIndex);
-                crushedNodes[nodeIndex] = [...crushedNodes[nodeIndex], ...crushedNodes[index]];
-                crushedNodes.splice(index, 1);
-                wasChanged = true;
-                break outerLoop; //break to avoid checking the rest of the connections
+              // console.log("merging nodes", index, "and", nodeIndex);
+              crushedNodes[nodeIndex] = [...crushedNodes[nodeIndex], ...crushedNodes[index]];
+              crushedNodes.splice(index, 1);
+              wasChanged = true;
+              break outerLoop; //break to avoid checking the rest of the connections
               // }
             }
           }
         }
       }
     }
-
   } while (wasChanged);
 
   //delete the node containing gnd
-  outerLoop : for (const index in crushedNodes) {
+  outerLoop: for (const index in crushedNodes) {
     const node = crushedNodes[index];
     for (const conn of node) {
       if (conn.type == "gnd") {

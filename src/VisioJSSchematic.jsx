@@ -11,7 +11,7 @@ import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
 import Grid from "@mui/material/Grid";
 
-import { addShapes } from "./common.js";
+import { addShapes, emptyResults } from "./common.js";
 
 const shapesWithLabels = {
   resistor: "R",
@@ -86,23 +86,16 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
       setNodes((old) => {
         if (JSON.stringify(old) == JSON.stringify(nodeMap)) return old;
         else {
-          setResults({ text: "", mathML: "", complexResponse: "", bilinearRaw: "", bilinearMathML: "" });
+          setResults({ ...emptyResults });
           return nodeMap;
         }
       });
 
       setComponents(components);
       //the keys of components are the names of the components. Find the next available name for each component type
-      // console.log("components", components);
       const tempNewComponent = {};
       for (const key in shapesWithLabels) tempNewComponent[key] = calculateNextIndex(components, key, shapesWithLabels[key]);
       setNextComponent(tempNewComponent);
-
-      //build the MNA matrix - do this after use clicks calculateMNA - FIXME
-      // build_and_solve_mna(nodeMap, 'vin', addShapes )
-      // console.log("nodemap", nodeMap);
-      // console.log("fullyConnectedComponents", fullyConnectedComponents, components);
-
     },
     [oldComponents, setComponentValues, setFullyConnectedComponents, setNodes, setResults],
   );

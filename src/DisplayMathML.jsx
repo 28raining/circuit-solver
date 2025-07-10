@@ -9,27 +9,10 @@ function DangerousSetIn({ mathMLString }) {
   return <div style={{ textAlign: "center" }} dangerouslySetInnerHTML={{ __html: mathMLString }} />;
 }
 /*{<DangerousSetIn mathMLString={mathML} />}*/
-export function DisplayMathML({ title, mathML, handleRequestBilin, textResult, caclDone }) {
+export function DisplayMathML({ title, mathML, textResult, caclDone }) {
   const [latexToast, setLatexToast] = useState(false);
   const [mathMLToast, setMathMLToast] = useState(false);
   if (!caclDone) return null;
-  //   if (tfType == "Laplace") return null;
-  //   else if (tfType == "Bilinear") {
-  //     return (
-  //       <div className="col">
-  //         <button
-  //           type="button"
-  //           className="btn btn-outline-primary py-0"
-  //           onClick={() => {
-  //             handleRequestBilin();
-  //           }}
-  //         >
-  //           Calculate bilinear transform
-  //         </button>
-  //       </div>
-  //     );
-  //   }
-  // }
   return (
     <>
       <Snackbar open={latexToast} autoHideDuration={10000} onClose={() => setLatexToast(false)} anchorOrigin={{ vertical: "top", horizontal: "right" }}>
@@ -61,22 +44,10 @@ export function DisplayMathML({ title, mathML, handleRequestBilin, textResult, c
       <Grid container spacing={1}>
         <Grid size={{ xs: 12, sm: 10 }}>
           <Grid size={12} sx={{ my: 2 }}>
-            <h3>{title} Transform</h3>
+            <h3>{title}</h3>
           </Grid>
-          <Grid size={12} style={{ overflow: "auto" }} sx={{ fontSize: "1.6em" }}>
-            {mathML == "" && title == "Bilinear" ? (
-              <Button
-                variant="contained"
-                color="info"
-                onClick={() => {
-                  handleRequestBilin();
-                }}
-              >
-                Calculate bilinear transform
-              </Button>
-            ) : (
-              <DangerousSetIn mathMLString={mathML} />
-            )}
+          <Grid size={12} style={{ overflow: "auto" }} sx={{ fontSize: "1.6em", minHeight: "55px" }}>
+            <DangerousSetIn mathMLString={mathML} />
           </Grid>
         </Grid>
         <Grid size={{ xs: 12, sm: 2 }}>

@@ -22,6 +22,8 @@ import MyChart from "./PlotTF.jsx";
 import Container from "@mui/material/Container";
 import Snackbar from "@mui/material/Snackbar";
 import SnackbarContent from "@mui/material/SnackbarContent";
+import Button from "@mui/material/Button";
+import Grid from "@mui/material/Grid";
 
 const initialComponents = {
   L0: {
@@ -103,10 +105,14 @@ function new_calculate_tf(textResult, fRange, numSteps, components) {
 
   //Now only remaining variable is S, substitute that and solve. Also swap power ^ for **
   const re = /s/gi;
+  const reDollar = /\$/gi;
   const re2 = /\^/gi;
-  const re3 = /abs/gi; //sometimes abs(C0) is left in the equation
-  var res = complex_freq.replace(re2, "**");
-  res = res.replace(re3, "");
+  var res = complex_freq.replace(re2, "**"); //swap ^ for **
+  // const re3 = /abs/gi; //sometimes abs(C0) is left in the equation
+  // res = res.replace(re3, "");
+  //now swap sqrt for '$'
+  const re3 = /sqrt/gi; //sometimes abs(C0) is left in the equation
+  res = res.replace(re3, "$"); //swap sqrt for $
 
   var fstepdB_20 = Math.log10(fRange.fmax / fRange.fmin) / numSteps;
   var fstep = 10 ** fstepdB_20;
@@ -118,7 +124,8 @@ function new_calculate_tf(textResult, fRange, numSteps, components) {
       freq.push(f);
       // const mathString = res.replace(re, 2 * Math.PI * f).replace(/\*\*/g, "^");
       // evalNew = evaluate(mathString);
-      const mathString = res.replace(re, 2 * Math.PI * f);
+      const mathString = res.replace(re, 2 * Math.PI * f).replace(reDollar, "Math.sqrt");
+      // console.log("evalNew", mathString);
       evalNew = eval(mathString);
 
       absNew = Math.abs(evalNew);
@@ -221,14 +228,14 @@ function App() {
     return url.toString();
   }
 
-  function handleRequestBilin() {
+  async function handleRequestBilin() {
     // console.log("handleRequestBilin", calcBilinear());
-    const [raw, bilin] = calcBilinear();
+    const [raw, bilin] = await calcBilinear(results.solver);
     // setBilinearMathML(`<math>${bilin}</math>`);
     // setBilinearRaw(raw);
     setResults({ ...results, bilinearRaw: raw, bilinearMathML: `<math>${bilin}</math>` });
   }
-  // console.log("render");
+  // console.log(results);
 
   // Update the DOM
   return (
@@ -262,30 +269,37 @@ function App() {
             </div>
           </div>
           <div className="row shadow-sm rounded bg-lightgreen my-2 py-3" id="schematic">
-            <ChoseTF
-              setResults={setResults}
-              nodes={nodes}
-              fullyConnectedComponents={fullyConnectedComponents}
-              componentValuesSolved={componentValuesSolved}
-            />
+            <ChoseTF setResults={setResults} nodes={nodes} fullyConnectedComponents={fullyConnectedComponents} componentValuesSolved={componentValuesSolved} />
             {results.text != "" && (
               <>
-                <DisplayMathML title="Laplace" textResult={results.text} mathML={results.mathML} caclDone={results.text != ""} />
+                <DisplayMathML title="Laplace Transform" textResult={results.text} mathML={results.mathML} caclDone={results.text != ""} />
+                {results.numericText != null && (
+                  <DisplayMathML title="Laplace Transform (numeric)" textResult={results.numericText} mathML={results.numericML} caclDone={results.text != ""} />
+                )}
                 <div className="col-12">
                   <MyChart freq_new={freq_new} mag_new={mag_new} />
                 </div>
                 <FreqAdjusters settings={settings} setSettings={setSettings} />
-                <DisplayMathML
-                  title="Bilinear"
-                  textResult={results.bilinearRaw}
-                  mathML={results.bilinearMathML}
-                  handleRequestBilin={() => handleRequestBilin()}
-                  caclDone={results.text != ""}
-                />
+                {results.bilinearMathML == "" ? (
+                  <Grid container spacing={1}>
+                    <Button
+                      variant="contained"
+                      color="info"
+                      sx={{ m: 3 }}
+                      onClick={async () => {
+                        handleRequestBilin();
+                      }}
+                    >
+                      Calculate bilinear transform
+                    </Button>
+                  </Grid>
+                ) : (
+                  <DisplayMathML title="Bilinear Transform" textResult={results.bilinearRaw} mathML={results.bilinearMathML} caclDone={results.text != ""} />
+                )}
               </>
             )}
           </div>
-          <div key="releaseNotes" className="row my-2 py-1 shadow-sm rounded bg-lightgreen">
+          <div key="releaseNotes" className="row my-2 py-1">
             <ReleaseNotes />
           </div>
           <div key="comments" className="row my-2 py-1 shadow-sm rounded bg-lightgreen">

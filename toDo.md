@@ -1,4 +1,3 @@
-
 #visiojs todo
 - delete wire, redraw wire, then undo breaks
 

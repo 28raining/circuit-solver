@@ -54,8 +54,9 @@ function ReleaseNotes() {
                         <li>It could crash, like when you drag one componenct directly on top of another</li>
                         <li>Limited features compared to industial tools</li>
                       </ul>
-                      Now it works on touch because I developed visiojs (https://www.npmjs.com/package/visiojs). Also visiojs replaces draw2d which was the source of all the crashing. 
-                      This site isn't feature rich - it's original purpose was to create Laplace transforms. But it does run MNA in the background so many more features could be added
+                      Now it works on touch because I developed visiojs (https://www.npmjs.com/package/visiojs). Also visiojs replaces draw2d which was the source of all the
+                      crashing. This site isn't feature rich - it's original purpose was to create Laplace transforms. But it does run MNA in the background so many more features
+                      could be added
                     </li>
                     <li>Moved to React + MUI + NPM. This allows: running lint, more maintainable code, smaller file size, many micro-benefits from joining the mainstream</li>
                     <li>As well as a re-write, the following new features are added:</li>
