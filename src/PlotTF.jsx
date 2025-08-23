@@ -1,6 +1,9 @@
 import ReactECharts from "echarts-for-react";
 
 const MyEChartsPlot = ({ freq_new, mag_new }) => {
+  if (freq_new.length === 0 || mag_new.length === 0) {
+    return <b>No data available for plot</b>;
+  }
   const option = {
     tooltip: {
       trigger: "axis",

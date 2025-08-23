@@ -5,6 +5,8 @@ export const units = {
   capacitor: { fF: 1e-15, pF: 1e-12, nF: 1e-9, uF: 1e-6, mF: 1e-3, F: 1 },
   inductor: { fH: 1e-15, pH: 1e-12, nH: 1e-9, uH: 1e-6, mH: 1e-3, H: 1 },
   frequency: { Hz: 1, kHz: 1e3, MHz: 1e6, GHz: 1e9, THz: 1e12 },
+  vcvs: { "V/V": 1 },
+  vcis: { "A/V": 1 },
 };
 
 export const addShapes = {
@@ -23,6 +25,42 @@ export const addShapes = {
       class: "circuit_label",
       x: 96,
       y: -32,
+    },
+  },
+  vcvs: {
+    image: "vcvs.svg",
+    connectors: [
+      [-64, 64],
+      [-64, 32],
+      [0, -32],
+      [0, 128],
+    ],
+    x: 0,
+    y: 0,
+    offset: [-80, -32],
+    label: {
+      text: "A1",
+      class: "circuit_label",
+      x: 48,
+      y: 24,
+    },
+  },
+  vcis: {
+    image: "vcis.svg",
+    connectors: [
+      [-64, 64],
+      [-64, 32],
+      [0, -32],
+      [0, 128],
+    ],
+    x: 0,
+    y: 0,
+    offset: [-80, -32],
+    label: {
+      text: "G1",
+      class: "circuit_label",
+      x: 48,
+      y: 24,
     },
   },
   resistor: {

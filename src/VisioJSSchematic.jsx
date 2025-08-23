@@ -1,5 +1,5 @@
 // import { visiojs } from "/visiojs/package/dist/visiojs.js";
-import { visiojs } from "visiojs";
+import visiojs from "visiojs";
 import { useEffect, useState, useCallback } from "react";
 import { createNodeMap } from "./visiojs_to_matrix.js";
 import Button from "@mui/material/Button";
@@ -17,6 +17,8 @@ const shapesWithLabels = {
   resistor: "R",
   capacitor: "C",
   inductor: "L",
+  vcvs: "A",
+  vcis: "G",
   opamp: "U",
   vprobe: "X",
   iprobe: "Y",
@@ -26,9 +28,11 @@ const componentDefaults = {
   resistor: { value: 1000, unit: "KΩ" },
   capacitor: { value: 1, unit: "pF" },
   inductor: { value: 1, unit: "nH" },
+  vcvs: { value: 100, unit: "V/V" },
+  vcis: { value: 1e-3, unit: "A/V" },
 };
 
-const activeComponents = ["opamp", "resistor", "capacitor", "inductor"];
+const activeComponents = ["opamp", "resistor", "capacitor", "inductor", "vcvs", "vcis"];
 const probes = ["vprobe", "iprobe"];
 
 //Add 0 to the end of the labels to make them unique

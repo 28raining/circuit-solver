@@ -77,6 +77,8 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
                   onClick={async () => {
                     setLoading(true);
                     setResults({ ...emptyResults }); // Reset results to empty
+                    //this console log is for collecting data for testing
+                    // console.log(nodes.length, int_probes, fullyConnectedComponents, valueForAlgebra, loadedPyo, algebraic);
                     const [textResult, mathml, complex_response, numericResult, numericText] = await build_and_solve_mna(
                       nodes.length,
                       int_probes,

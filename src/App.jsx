@@ -93,7 +93,7 @@ function stateFromURL() {
 }
 const [modifiedComponents, modifiedSettings, modifiedSchematic] = stateFromURL();
 
-function new_calculate_tf(textResult, fRange, numSteps, components) {
+function new_calculate_tf(textResult, fRange, numSteps, components, setErrorSnackbar) {
   // console.log("new_calculate_tf", { textResult, fRange, numSteps, components });
   if (textResult == "") return { freq_new: [], mag_new: [] };
   var complex_freq = textResult;
@@ -113,6 +113,8 @@ function new_calculate_tf(textResult, fRange, numSteps, components) {
   //now swap sqrt for '$'
   const re3 = /sqrt/gi; //sometimes abs(C0) is left in the equation
   res = res.replace(re3, "$"); //swap sqrt for $
+  const re4 = /abs/gi;
+  res = res.replace(re4, ""); //swap Abs(...) for (...). I saw one case where Sympy left it in but it's ok to remove it like this
 
   var fstepdB_20 = Math.log10(fRange.fmax / fRange.fmin) / numSteps;
   var fstep = 10 ** fstepdB_20;
@@ -125,14 +127,16 @@ function new_calculate_tf(textResult, fRange, numSteps, components) {
       // const mathString = res.replace(re, 2 * Math.PI * f).replace(/\*\*/g, "^");
       // evalNew = evaluate(mathString);
       const mathString = res.replace(re, 2 * Math.PI * f).replace(reDollar, "Math.sqrt");
-      // console.log("evalNew", mathString);
       evalNew = eval(mathString);
 
       absNew = Math.abs(evalNew);
       mag.push(20 * Math.log10(absNew));
     }
   } catch (err) {
-    // copiedToastError.show() //FIXME - re add this
+    setErrorSnackbar((x) => {
+      if (!x) return true;
+      else return x;
+    });
     console.log("oh no", err);
   }
 
@@ -152,12 +156,9 @@ function App() {
   const [settings, setSettings] = useState(modifiedSettings);
   const [schemHistory, setSchemHistory] = useState({ pointer: 0, state: [modifiedSchematic] });
   const [urlSnackbar, setUrlSnackbar] = useState(false);
+  const [errorSnackbar, setErrorSnackbar] = useState(false);
 
   const handleSnackbarClick = () => {
-    // setComponentValues({ ...initialComponents });
-    // setSettings({ ...initialSettings });
-    // setSchemHistory({pointer: 0, state: []});
-    // setUrlSnackbar(false);
     window.location.href = window.location.origin + window.location.pathname;
   };
 
@@ -195,12 +196,42 @@ function App() {
     );
   }
 
-  const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
+  function SnackbarError() {
+    return (
+      <Snackbar
+        open={errorSnackbar}
+        autoHideDuration={10000}
+        onClose={() => setErrorSnackbar(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        message="This Snackbar will be dismissed in 5 seconds."
+      >
+        <SnackbarContent
+          message="An error has occurred. Please try using Sympy. If the issue persists please leave a comment"
+          sx={{
+            backgroundColor: "#ec1186ff",
+            color: "#fff",
+            maxWidth: 200,
+          }}
+        />
+      </Snackbar>
+    );
+  }
 
   const componentValuesSolved = {};
   for (const key in componentValues) componentValuesSolved[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
 
-  const { freq_new, mag_new } = new_calculate_tf(results.complexResponse, fRange, settings.resolution, componentValuesSolved);
+  // const { freq_new, mag_new } = new_calculate_tf(results.complexResponse, fRange, settings.resolution, componentValuesSolved, errorSnackbar, () => setErrorSnackbar(true));
+
+  const [freq_new, setFreqNew] = useState(null);
+  const [mag_new, setMagNew] = useState(null);
+  useEffect(() => {
+    const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
+    const componentValuesSolved2 = {};
+    for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
+    const { freq_new, mag_new } = new_calculate_tf(results.complexResponse, fRange, settings.resolution, componentValuesSolved2, setErrorSnackbar);
+    setFreqNew(freq_new);
+    setMagNew(mag_new);
+  }, [results, settings, componentValues]);
 
   function stateToURL() {
     const url = new URL(window.location.href);
@@ -241,6 +272,7 @@ function App() {
   return (
     <>
       <LetUserKnowAboutURL />
+      <SnackbarError />
       <NavBar stateToURL={stateToURL} />
       <div className="w-100 p-2 bg-green pb-5" key="wrapper">
         {/* <div className="container-xl" key="topContainer"> */}

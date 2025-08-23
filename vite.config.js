@@ -5,6 +5,15 @@ import svgr from "vite-plugin-svgr";
 
 // https://vite.dev/config/
 export default defineConfig({
+  test: {
+    browser: {
+      instances:[{
+        enabled: true,
+        browser: "chromium", // or 'firefox', 'webkit'
+        provider: "playwright",
+      }],
+    },
+  },
   plugins: [
     react(),
     svgr(),

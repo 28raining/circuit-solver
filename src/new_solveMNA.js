@@ -35,10 +35,7 @@ result_numeric_simplified = simplify(result_numeric)
 
 str(result_simplified), mathml(result_simplified, printer='presentation'), str(rx), mathml(result_numeric_simplified, printer='presentation'), str(result_numeric_simplified)
 `;
-  // console.log("sympyString", sympyString);
   const [textResult, mathml, complex_response, numericML, numericText] = await pyodide.runPythonAsync(sympyString);
-  // console.log(tmp);
-  // const newNumeric = numericML.replaceAll(/<mo>&#xB7;<\/mo>\s*<msup>\s*<mn>10<\/mn>\s*<mn>(-?\d+)<\/mn>\s*<\/msup>/g, (_match, exp) => `<msup><mn>e</mn><mn>${exp}</mn></msup>`);
   const newNumeric = numericML;
   const newNumericText = numericText.replaceAll("**", "^");
 
@@ -61,35 +58,9 @@ function solveWithAlgebrite(matrixStr, mnaMatrix, resIndex, resIndex2) {
       }
     }
 
-    //   if (plottingI) {
-    //     if (iinOrVin == "vin") Algebrite.eval("mna_vo_vi = (inv_mna[" + mnaMatrix.length + "][" + (mnaMatrix.length - numOpAmps - numIprb) + "])");
-    //     else Algebrite.eval("mna_vo_vi = (inv_mna[" + mnaMatrix.length + "][" + (iinNode + 1) + "])");
-    //   } else {
-    //     //are we plotting V or deltaV?
-    //     if (chosenPlot.length == 1) {
-    //       const voutNode = elementMap[chosenPlot[0]].ports[0];
-    //       if (iinOrVin == "vin") Algebrite.eval("mna_vo_vi = (inv_mna[" + (voutNode + 1) + "][" + (mnaMatrix.length - numOpAmps - numIprb) + "])");
-    //       else Algebrite.eval("mna_vo_vi = (inv_mna[" + (voutNode + 1) + "][" + (iinNode + 1) + "])");
-    //     } else {
-    //       //if we are plotting a deltaV, we need to subtract the two nodes
-    //       const voutNode1 = elementMap[chosenPlot[0]].ports[0];
-    //       const voutNode2 = elementMap[chosenPlot[1]].ports[0];
-    //       if (iinOrVin == "vin")
-    //         Algebrite.eval(
-    //           `mna_vo_vi = inv_mna[${voutNode1 + 1}][${mnaMatrix.length - numOpAmps - numIprb}] - inv_mna[${voutNode2 + 1}][${mnaMatrix.length - numOpAmps - numIprb}]`,
-    //         );
-    //       else Algebrite.eval(`mna_vo_vi = inv_mna[${voutNode1 + 1}][${iinNode + 1}] - inv_mna[${voutNode2 + 1}][${iinNode + 1}]`);
-    //     }
-    //   }
-    // }
-
     var strOut = Algebrite.eval("mna_vo_vi").toString(); //4ms
 
-    // for (const c in componentValuesSolved) strOut = strOut.replaceAll(c, componentValuesSolved[c]); // Algebrite.eval(`mna_vo_vi = subst(${fullyConnectedComponents[c].value},${c},mna_vo_vi)`);
-    // var z = expr.replace(/([CRL]+)([0-9]*)/g, "$1_$2"); //Swap R0 for R_0 so this new library can consume it
-
     const [textResult, mathml] = simplify_algebra(strOut);
-    // console.log("mna_vo_vi", strOut, textResult);
 
     Algebrite.eval("complex_response = subst(s*i,s,mna_vo_vi)");
     Algebrite.eval("abs_complex_response = abs(complex_response)");
@@ -115,6 +86,9 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
   const elementMap = fullyConnectedComponents;
   const numIprb = Object.values(elementMap).filter((el) => el.type === "iprobe").length;
   const numOpAmps = Object.values(elementMap).filter((el) => el.type === "opamp").length;
+  const numVCVS = Object.values(elementMap).filter((el) => el.type === "vcvs").length;
+  // const numVCIS = Object.values(elementMap).filter((el) => el.type === "vcis").length;
+  const numActives = numOpAmps + numVCVS;
 
   // console.log("nodeArray 2", nodeArray);
   // console.log("elementMap", elementMap);
@@ -130,7 +104,7 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
   const iinOrVin = "vin" in elementMap ? "vin" : "iin";
   const extraRow = iinOrVin == "vin" ? 1 : 0;
 
-  var mnaMatrix = new Array(numNodes + extraRow + numOpAmps + numIprb);
+  var mnaMatrix = new Array(numNodes + extraRow + numActives + numIprb);
   for (i = 0; i < mnaMatrix.length; i++) mnaMatrix[i] = new Array(mnaMatrix.length).fill("0");
 
   // Step 1 - loop thru elementMap and start adding things to the MNA
@@ -155,10 +129,10 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
 
   if (iinOrVin == "vin") {
     //2.3 Add a 1 in the bottom row indicating which node is Vin connected too
-    mnaMatrix[mnaMatrix.length - 1 - numOpAmps - numIprb][vinNode] = "1";
+    mnaMatrix[numNodes][vinNode] = "1";
 
     //2.4 Add a 1 in the node connected to Vin to indicate that Iin flows into that node
-    mnaMatrix[vinNode][mnaMatrix.length - 1 - numOpAmps - numIprb] = "1";
+    mnaMatrix[vinNode][numNodes] = "1";
   }
 
   // console.log("mnaMatrix", mnaMatrix);
@@ -180,12 +154,24 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
       if (el.ports[1] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[1]] = "-1";
       if (el.ports[2] != null) mnaMatrix[el.ports[2]][numNodes + extraRow + opAmpCounter] = "1";
       opAmpCounter++;
+    } else if (el.type === "vcvs") {
+      if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[0]] = `+${name}`;
+      if (el.ports[1] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[1]] = `-${name}`;
+      if (el.ports[2] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[2]] += `+1`;
+      if (el.ports[3] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[3]] += `-1`;
+      if (el.ports[2] != null) mnaMatrix[el.ports[2]][numNodes + extraRow + opAmpCounter] = "1";
+      if (el.ports[3] != null) mnaMatrix[el.ports[3]][numNodes + extraRow + opAmpCounter] = "-1";
+      opAmpCounter++;
+    } else if (el.type === "vcis") {
+      if (el.ports[2] != null && el.ports[0] != null) mnaMatrix[el.ports[2]][el.ports[0]] += `-${name}`;
+      if (el.ports[2] != null && el.ports[1] != null) mnaMatrix[el.ports[2]][el.ports[1]] += `+${name}`;
+      if (el.ports[3] != null && el.ports[0] != null) mnaMatrix[el.ports[3]][el.ports[0]] += `+${name}`;
+      if (el.ports[3] != null && el.ports[1] != null) mnaMatrix[el.ports[3]][el.ports[1]] += `-${name}`;
     } else if (el.type === "iprobe") {
-      console.log("iprobe", numNodes + extraRow + numOpAmps + iprbCounter, el.ports[0]);
-      mnaMatrix[numNodes + extraRow + numOpAmps + iprbCounter][el.ports[0]] = "1";
-      mnaMatrix[el.ports[0]][numNodes + extraRow + numOpAmps + iprbCounter] = "1";
-      mnaMatrix[numNodes + extraRow + numOpAmps + iprbCounter][el.ports[1]] = "-1";
-      mnaMatrix[el.ports[1]][numNodes + extraRow + numOpAmps + iprbCounter] = "-1";
+      mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[0]] = "1";
+      mnaMatrix[el.ports[0]][numNodes + extraRow + numActives + iprbCounter] = "1";
+      mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[1]] = "-1";
+      mnaMatrix[el.ports[1]][numNodes + extraRow + numActives + iprbCounter] = "-1";
       iprbCounter++;
     }
   }
@@ -196,63 +182,19 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
   }
   const nerdStr = nerdStrArr.join(",");
 
-  // //Using algebrite not nerdamer
-  // Algebrite.eval("clearall");
-  // Algebrite.eval("mna = [" + nerdStr + "]");
-
-  // if (mnaMatrix.length == 1) {
-  //   Algebrite.eval(`mna_vo_vi = 1/(${mnaMatrix[0]})`); //FIXME - is this correct? When is it hit, with Iin?
-  // } else {
-  //   Algebrite.eval("inv_mna = inv(mna)");
-
-  //   if (plottingI) {
-  //     if (iinOrVin == "vin") Algebrite.eval("mna_vo_vi = (inv_mna[" + mnaMatrix.length + "][" + (mnaMatrix.length - numOpAmps - numIprb) + "])");
-  //     else Algebrite.eval("mna_vo_vi = (inv_mna[" + mnaMatrix.length + "][" + (iinNode + 1) + "])");
-  //   } else {
-  //     //are we plotting V or deltaV?
-  //     if (chosenPlot.length == 1) {
-  //       const voutNode = elementMap[chosenPlot[0]].ports[0];
-  //       if (iinOrVin == "vin") Algebrite.eval("mna_vo_vi = (inv_mna[" + (voutNode + 1) + "][" + (mnaMatrix.length - numOpAmps - numIprb) + "])");
-  //       else Algebrite.eval("mna_vo_vi = (inv_mna[" + (voutNode + 1) + "][" + (iinNode + 1) + "])");
-  //     } else {
-  //       //if we are plotting a deltaV, we need to subtract the two nodes
-  //       const voutNode1 = elementMap[chosenPlot[0]].ports[0];
-  //       const voutNode2 = elementMap[chosenPlot[1]].ports[0];
-  //       if (iinOrVin == "vin")
-  //         Algebrite.eval(
-  //           `mna_vo_vi = inv_mna[${voutNode1 + 1}][${mnaMatrix.length - numOpAmps - numIprb}] - inv_mna[${voutNode2 + 1}][${mnaMatrix.length - numOpAmps - numIprb}]`,
-  //         );
-  //       else Algebrite.eval(`mna_vo_vi = inv_mna[${voutNode1 + 1}][${iinNode + 1}] - inv_mna[${voutNode2 + 1}][${iinNode + 1}]`);
-  //     }
-  //   }
-  // }
-
-  // var strOut = Algebrite.eval("mna_vo_vi").toString(); //4ms
-
-  // for (const c in componentValuesSolved) strOut = strOut.replaceAll(c, componentValuesSolved[c]); // Algebrite.eval(`mna_vo_vi = subst(${fullyConnectedComponents[c].value},${c},mna_vo_vi)`);
-  // // var z = expr.replace(/([CRL]+)([0-9]*)/g, "$1_$2"); //Swap R0 for R_0 so this new library can consume it
-
-  // const [textResult, mathml] = simplify_algebra(strOut);
-  // // console.log("mna_vo_vi", strOut, textResult);
-
-  // Algebrite.eval("complex_response = subst(s*i,s,mna_vo_vi)");
-  // Algebrite.eval("abs_complex_response = abs(complex_response)");
-
-  // const complex_response = Algebrite.eval("abs_complex_response").toString();
-
   var resIndex = [];
   var resIndex2 = [];
   if (plottingI) {
-    if (iinOrVin == "vin") resIndex.push(mnaMatrix.length, mnaMatrix.length - numOpAmps - numIprb);
-    else resIndex.push(mnaMatrix.length, iinNode);
+    if (iinOrVin == "vin") resIndex.push(mnaMatrix.length, numNodes + 1);
+    else resIndex.push(mnaMatrix.length, iinNode + 1);
   } else {
     const voutNode = elementMap[chosenPlot[0]].ports[0];
-    if (iinOrVin == "vin") resIndex.push(voutNode + 1, mnaMatrix.length - numOpAmps - numIprb);
+    if (iinOrVin == "vin") resIndex.push(voutNode + 1, numNodes + 1);
     else resIndex.push(voutNode + 1, iinNode + 1);
     if (chosenPlot.length == 2) {
       //are we plotting V or deltaV?
       const voutNode2 = elementMap[chosenPlot[1]].ports[0];
-      if (iinOrVin == "vin") resIndex2.push(voutNode2 + 1, mnaMatrix.length - numOpAmps - numIprb);
+      if (iinOrVin == "vin") resIndex2.push(voutNode2 + 1, numNodes + 1);
       else resIndex2.push(voutNode2 + 1, iinNode + 1);
     }
   }
@@ -263,14 +205,8 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
   } else {
     [textResult, mathml, complex_response, numericResult, numericText] = await solveWithSymPy(nerdStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide);
   }
-  // console.log("numericResult", numericResult);
 
   return [textResult, mathml, complex_response, numericResult, numericText];
-  // } catch (err) {
-  //   console.log("Building MNA matrix failed with this error:", err);
-  //   //FIXME - show the toast
-  //   return ["", "", ""];
-  // }
 }
 
 export async function calcBilinear(solver) {
