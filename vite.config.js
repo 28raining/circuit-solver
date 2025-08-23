@@ -7,11 +7,13 @@ import svgr from "vite-plugin-svgr";
 export default defineConfig({
   test: {
     browser: {
-      instances:[{
-        enabled: true,
-        browser: "chromium", // or 'firefox', 'webkit'
-        provider: "playwright",
-      }],
+      instances: [
+        {
+          enabled: true,
+          browser: "chromium", // or 'firefox', 'webkit'
+          provider: "playwright",
+        },
+      ],
     },
   },
   plugins: [

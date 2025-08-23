@@ -1,7 +1,9 @@
 #visiojs todo
+
 - delete wire, redraw wire, then undo breaks
 
 ## New todo with visiojs
+
 1 - Remove draw2d, replace with visiojs
 2 - move to npm
 3 - add new user requested features
@@ -15,15 +17,15 @@
 - re-add solvable flag
 - add component selectors
 
-
-
 -- Below is done later, after laplace derivation is more thoroughly verified... --
 3 - Show bilinear transform equation
 4 - Show state space representation
 5 - Draw amplitude response of those 3 transforms
+
 - if add op amp with zero on input and LC on output, and change input to current source, it crashes
 
 # Done on Jan 28th
+
 - handle errors in calculate mna better
 - use a calculate button
 - move algebrite out of mna and skip it until user clicks calculate TF
@@ -32,17 +34,17 @@
 - if theres an error show it to the user
 - safari overflow of laplace transform and reset not working?
 
-
-
-
 # Done on Jan 6 2024
+
 1 - mouse over tie to x
 2 - let user control number of steps
 3 - iin should not show cap size!
 4 - rotation state saved to the URL
 5 - Add url shareable button and toast
 6- - if state is corrupted then reset!
+
 # Draw2D
+
 - [x] Add a resistor shape to toolbar
 - [x] Add capacitor shape to toolbar
 - [x] allow drag + drop + connect
@@ -52,7 +54,9 @@
 - [x] Add a checklist of items which need to be done before laplace is calculated
 - [x] Build the MNA matrix
 - [x] solve the matrix and display the answer
-#### STOP - clean up the code! 
+
+#### STOP - clean up the code!
+
 - [x] Switch to algebrite -> done - remove nerdamer
 - [x] Put the code into js modules
 - [x] Use Preact properly
@@ -67,14 +71,18 @@
 - [x] Fix component port location, and make drawings nicer...
 - [x] Use Draw2D grid
 - [x] Laplace use subscript in number
+
 #### Plotly
+
 - [x] add min-to-max frequency range
 - [x] Update when user changes value or unit
-- [x] Use units 
+- [x] Use units
 - [x] Add x-y cursors
 - [x] Prevent user adding multiple Vin or Vout
 - [x] Stop it crashing when user drags multiple elements
+
 #### Remaining
+
 - [x] Make draggable things into images, not text boxes
 - [x] Add option to rotate components
 - [x] displaying frequency response
@@ -93,20 +101,21 @@
 - [x] Separate page into those nice boxes each with shadow
 - [x] Add comments section
 - [x] On graph add x, y labels
- 
+
 # Kind of buggy - will look at in the future
+
 - [ ] Zoom in and out
 
 # Might do in the future
+
 - [ ] Add a hold button
 - [ ] Make graph background transparent
 - [ ] Add color switcher in top bar
 
-
-
 # Future ideas
+
 - Site to store tiny pieces of data. So this site can have memory and be severless. And smith chart site
 - A well documented, crowd sourced algebra library
 - A replacement for draw2D without jQuery
--- fix rotation
--- be supported
+  -- fix rotation
+  -- be supported

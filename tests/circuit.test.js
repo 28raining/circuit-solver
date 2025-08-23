@@ -33,9 +33,9 @@ test("voltage in current probe - 1", async () => {
     R0: 10000,
     C0: 1.0000000000000002e-14,
   };
-  const [textResult, mathml, complex_response, numericResult, numericText] = await build_and_solve_mna(3, ["Y0"], components, values, pyodide, "sympy");
+  const [textResult, _mathml, complex_response, _numericResult, numericText] = await build_and_solve_mna(3, ["Y0"], components, values, pyodide, "sympy");
   expect(textResult).toEqual("C0*L0*s**2/(C0*L0*R0*s**2 + L0*s + R0)");
-  // expect(mathml).toEqual(null);
+  // expect(_mathml).toEqual(null);
   expect(complex_response).toEqual("C0*L0*s**2/sqrt(C0**2*L0**2*R0**2*s**4 - 2*C0*L0*R0**2*s**2 + L0**2*s**2 + R0**2)");
   expect(numericText).toEqual("1.0e-20*s^2/(1.0e-16*s^2 + 1.0e-6*s + 10000)");
 });
@@ -68,9 +68,9 @@ test("voltage in current probe - 2", async () => {
     R0: 10000,
     C0: 1.0000000000000002e-14,
   };
-  const [textResult, mathml, complex_response, numericResult, numericText] = await build_and_solve_mna(3, ["Y0"], components, values, pyodide, "sympy");
+  const [textResult, _mathml, complex_response, _numericResult, numericText] = await build_and_solve_mna(3, ["Y0"], components, values, pyodide, "sympy");
   expect(textResult).toEqual("C0*L0*s**2/(C0*L0*R0*s**2 + L0*s + R0)");
-  // expect(mathml).toEqual(null);
+  // expect(_mathml).toEqual(null);
   expect(complex_response).toEqual("C0*L0*s**2/sqrt(C0**2*L0**2*R0**2*s**4 - 2*C0*L0*R0**2*s**2 + L0**2*s**2 + R0**2)");
   expect(numericText).toEqual("1.0e-20*s^2/(1.0e-16*s^2 + 1.0e-6*s + 10000)");
 });
@@ -103,9 +103,9 @@ test("current in current probe - 2", async () => {
     R0: 10000,
     C0: 1.0000000000000002e-14,
   };
-  const [textResult, mathml, complex_response, numericResult, numericText] = await build_and_solve_mna(3, ["Y0"], components, values, pyodide, "sympy");
+  const [textResult, _mathml, complex_response, _numericResult, numericText] = await build_and_solve_mna(3, ["Y0"], components, values, pyodide, "sympy");
   expect(textResult).toEqual("L0*s/(L0*s + R0)");
-  // expect(mathml).toEqual(null);
+  // expect(_mathml).toEqual(null);
   expect(complex_response).toEqual("L0*s/sqrt(L0**2*s**2 + R0**2)");
   expect(numericText).toEqual("1.0e-6*s/(1.0e-6*s + 10000)");
 });
@@ -133,9 +133,9 @@ test("current in current probe VCIS - 3", async () => {
     G0: 0.001,
     R0: 1000000,
   };
-  const [textResult, mathml, complex_response, numericResult, numericText] = await build_and_solve_mna(2, ["Y0"], components, values, pyodide, "sympy");
+  const [textResult, _mathml, complex_response, _numericResult, numericText] = await build_and_solve_mna(2, ["Y0"], components, values, pyodide, "sympy");
   expect(textResult).toEqual("G0*R0/(G0*R0 + 1)");
-  // expect(mathml).toEqual(null);
+  // expect(_mathml).toEqual(null);
   expect(complex_response).toEqual("G0*R0/(G0*R0 + 1)");
   expect(numericText).toEqual("0.999000999000999");
 });
@@ -173,9 +173,9 @@ test("voltage in voltage probe VCVS", async () => {
     A0: 100,
     R0: 1000000,
   };
-  const [textResult, mathml, complex_response, numericResult, numericText] = await build_and_solve_mna(3, ["X0"], components, values, pyodide, "sympy");
+  const [textResult, _mathml, complex_response, _numericResult, numericText] = await build_and_solve_mna(3, ["X0"], components, values, pyodide, "sympy");
   expect(textResult).toEqual("A0*R0*(C0*L0*s**2 + 1)/(C0*L0*R0*s**2 + L0*s + R0)");
-  // expect(mathml).toEqual(null);
+  // expect(_mathml).toEqual(null);
   expect(complex_response).toEqual("Abs(A0*C0*L0*R0*s**2 - A0*R0)/sqrt(C0**2*L0**2*R0**2*s**4 - 2*C0*L0*R0**2*s**2 + L0**2*s**2 + R0**2)"); //FIXME - this seems to be a sympy bug
   expect(numericText).toEqual("(1.0e-13*s^2 + 100000000)/(1.0e-15*s^2 + 1.0e-9*s + 1000000)");
 });
