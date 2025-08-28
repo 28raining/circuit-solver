@@ -1,6 +1,7 @@
 #visiojs todo
 
 - delete wire, redraw wire, then undo breaks
+- Move the matrix solver into a web worker. So if can be killed with a timeout
 
 ## New todo with visiojs
 

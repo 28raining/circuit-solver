@@ -115,6 +115,8 @@ function new_calculate_tf(textResult, fRange, numSteps, components, setErrorSnac
   res = res.replace(re3, "$"); //swap sqrt for $
   const re4 = /abs/gi;
   res = res.replace(re4, ""); //swap Abs(...) for (...). I saw one case where Sympy left it in but it's ok to remove it like this
+  const re5 = /I/gi;
+  res = res.replace(re5, "1"); //swap I for 1. Sometimes sympy leaves in the I if the result is fully imaginary. This is dangerous and instead the numeric solving should go inside sympy
 
   var fstepdB_20 = Math.log10(fRange.fmax / fRange.fmin) / numSteps;
   var fstep = 10 ** fstepdB_20;

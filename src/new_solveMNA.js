@@ -28,10 +28,12 @@ ${
 }`
 }
 mna_vo_vi_complex = mna_vo_vi.subs(s, s*I)
-rx = Abs(mna_vo_vi_complex)
+
 result_simplified = simplify(mna_vo_vi)
 result_numeric = result_simplified.subs(${JSON.stringify(componentValuesSolved).replaceAll('"', "")})
 result_numeric_simplified = simplify(result_numeric)
+result_numeric_complex = result_numeric_simplified.subs(s, s*I)
+rx = Abs(result_numeric_complex)
 
 str(result_simplified), mathml(result_simplified, printer='presentation'), str(rx), mathml(result_numeric_simplified, printer='presentation'), str(result_numeric_simplified)
 `;
@@ -42,7 +44,7 @@ str(result_simplified), mathml(result_simplified, printer='presentation'), str(r
   return [textResult, removeFenced(mathml), complex_response, removeFenced(newNumeric), newNumericText];
 }
 
-function solveWithAlgebrite(matrixStr, mnaMatrix, resIndex, resIndex2) {
+async function solveWithAlgebrite(matrixStr, mnaMatrix, resIndex, resIndex2) {
   try {
     Algebrite.eval("clearall");
 
