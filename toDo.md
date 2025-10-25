@@ -2,6 +2,7 @@
 
 - delete wire, redraw wire, then undo breaks
 - Move the matrix solver into a web worker. So if can be killed with a timeout
+- Use sympy only, move the frequency solving in there too (so it cal calcuate abs more reliably)
 
 ## New todo with visiojs
 
