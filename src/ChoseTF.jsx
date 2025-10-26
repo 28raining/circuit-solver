@@ -26,7 +26,7 @@ function formatMathML(mathml, p, drivers) {
   return `<math><mfrac><mrow><mi>${p}</mi></mrow><mrow><msub><mi>${drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${mathml}</math>`;
 }
 
-export function ChoseTF({ setResults, nodes, fullyConnectedComponents, componentValuesSolved }) {
+export function ChoseTF({ setResults, nodes, fullyConnectedComponents, componentValuesSolved, setUnsolveSnackbar }) {
   const [algebraic, setAlgebraic] = useState("algebrite");
   const [loading, setLoading] = useState(false);
   const [loadedPyo, setLoadedPyo] = useState(null);
@@ -87,6 +87,12 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
                       loadedPyo,
                       algebraic,
                     );
+                    if (textResult === "" && mathml === "" && complex_response === "") {
+                      setUnsolveSnackbar((x) => {
+                        if (!x) return true;
+                        else return x;
+                      });
+                    }
                     const editedMathMl = formatMathML(mathml, p, drivers);
                     const editedMathMlNumeric = formatMathML(numericResult, p, drivers);
                     setResults({

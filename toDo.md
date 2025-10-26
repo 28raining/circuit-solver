@@ -1,4 +1,7 @@
-#visiojs todo
+# Todo Oct 23rd
+- Update all the packages - once Sympy 1.13.4 is integrated to Pyodide!
+
+# visiojs todo
 
 - delete wire, redraw wire, then undo breaks
 - Move the matrix solver into a web worker. So if can be killed with a timeout
@@ -25,6 +28,13 @@
 5 - Draw amplitude response of those 3 transforms
 
 - if add op amp with zero on input and LC on output, and change input to current source, it crashes
+
+# Done October 2025
+
+- Fix Algebrite which got broken when Sympy moved to async function
+- Fix self testing which got broken when numeric solving moved from js to sympy
+- Add an algebrite case to self testing
+- If Sympy crashes, don't hang for ever, feed it back to the user. It does this with a Toast
 
 # Done on Jan 28th
 

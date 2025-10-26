@@ -159,6 +159,7 @@ function App() {
   const [schemHistory, setSchemHistory] = useState({ pointer: 0, state: [modifiedSchematic] });
   const [urlSnackbar, setUrlSnackbar] = useState(false);
   const [errorSnackbar, setErrorSnackbar] = useState(false);
+  const [unsolveSnackbar, setUnsolveSnackbar] = useState(false);
 
   const handleSnackbarClick = () => {
     window.location.href = window.location.origin + window.location.pathname;
@@ -219,10 +220,29 @@ function App() {
     );
   }
 
+  function SnackbarUnsolvable() {
+    return (
+      <Snackbar
+        open={unsolveSnackbar}
+        autoHideDuration={10000}
+        onClose={() => setUnsolveSnackbar(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        message="This Snackbar will be dismissed in 5 seconds."
+      >
+        <SnackbarContent
+          message="The circuit seems to be unsolvable. Please double check your connections and try using Sympy if not already. Check the console for more details, and feel free to leave a comment."
+          sx={{
+            backgroundColor: "#ec1186ff",
+            color: "#fff",
+            maxWidth: 200,
+          }}
+        />
+      </Snackbar>
+    );
+  }
+
   const componentValuesSolved = {};
   for (const key in componentValues) componentValuesSolved[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
-
-  // const { freq_new, mag_new } = new_calculate_tf(results.complexResponse, fRange, settings.resolution, componentValuesSolved, errorSnackbar, () => setErrorSnackbar(true));
 
   const [freq_new, setFreqNew] = useState(null);
   const [mag_new, setMagNew] = useState(null);
@@ -275,6 +295,7 @@ function App() {
     <>
       <LetUserKnowAboutURL />
       <SnackbarError />
+      <SnackbarUnsolvable />
       <NavBar stateToURL={stateToURL} />
       <div className="w-100 p-2 bg-green pb-5" key="wrapper">
         {/* <div className="container-xl" key="topContainer"> */}
@@ -303,7 +324,13 @@ function App() {
             </div>
           </div>
           <div className="row shadow-sm rounded bg-lightgreen my-2 py-3" id="schematic">
-            <ChoseTF setResults={setResults} nodes={nodes} fullyConnectedComponents={fullyConnectedComponents} componentValuesSolved={componentValuesSolved} />
+            <ChoseTF
+              setResults={setResults}
+              nodes={nodes}
+              fullyConnectedComponents={fullyConnectedComponents}
+              componentValuesSolved={componentValuesSolved}
+              setUnsolveSnackbar={setUnsolveSnackbar}
+            />
             {results.text != "" && (
               <>
                 <DisplayMathML title="Laplace Transform" textResult={results.text} mathML={results.mathML} caclDone={results.text != ""} />

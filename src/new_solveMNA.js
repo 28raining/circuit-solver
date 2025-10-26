@@ -37,11 +37,16 @@ rx = Abs(result_numeric_complex)
 
 str(result_simplified), mathml(result_simplified, printer='presentation'), str(rx), mathml(result_numeric_simplified, printer='presentation'), str(result_numeric_simplified)
 `;
-  const [textResult, mathml, complex_response, numericML, numericText] = await pyodide.runPythonAsync(sympyString);
-  const newNumeric = numericML;
-  const newNumericText = numericText.replaceAll("**", "^");
+  try {
+    const [textResult, mathml, complex_response, numericML, numericText] = await pyodide.runPythonAsync(sympyString);
+    const newNumeric = numericML;
+    const newNumericText = numericText.replaceAll("**", "^");
 
-  return [textResult, removeFenced(mathml), complex_response, removeFenced(newNumeric), newNumericText];
+    return [textResult, removeFenced(mathml), complex_response, removeFenced(newNumeric), newNumericText];
+  } catch (err) {
+    console.log("Solving MNA matrix failed with this error:", err);
+    return ["", "", "", "", ""];
+  }
 }
 
 async function solveWithAlgebrite(matrixStr, mnaMatrix, resIndex, resIndex2) {
@@ -72,7 +77,6 @@ async function solveWithAlgebrite(matrixStr, mnaMatrix, resIndex, resIndex2) {
     return [textResult, mathml, complex_response];
   } catch (err) {
     console.log("Building MNA matrix failed with this error:", err);
-    //FIXME - show the toast
     return ["", "", ""];
   }
 }
@@ -203,7 +207,7 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
   var numericResult, textResult, mathml, complex_response, numericText;
 
   if (solver === "algebrite") {
-    [textResult, mathml, complex_response] = solveWithAlgebrite(nerdStr, mnaMatrix, resIndex, resIndex2);
+    [textResult, mathml, complex_response] = await solveWithAlgebrite(nerdStr, mnaMatrix, resIndex, resIndex2);
   } else {
     [textResult, mathml, complex_response, numericResult, numericText] = await solveWithSymPy(nerdStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide);
   }
