@@ -13,7 +13,7 @@ export async function initPyodideAndSympy() {
   // await micropip.install('sympy');
   await pyodide.loadPackage("sympy");
   var initStr = `
-from sympy import Matrix, symbols, simplify, Abs, I, fraction, solve
+from sympy import Matrix, symbols, simplify, Abs, I, fraction, solve, arg
 from sympy.printing.mathml import mathml`;
   await pyodide.runPythonAsync(initStr);
   return pyodide;

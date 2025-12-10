@@ -1,5 +1,3 @@
-import * as Algebrite from "algebrite";
-import simplify_algebra from "./simplify_algebra.js";
 // import { loadPyodide } from "pyodide";
 // import { initPyodideAndSympy } from "./pyodideLoader";
 
@@ -49,41 +47,9 @@ str(result_simplified), mathml(result_simplified, printer='presentation'), str(r
   }
 }
 
-async function solveWithAlgebrite(matrixStr, mnaMatrix, resIndex, resIndex2) {
-  try {
-    Algebrite.eval("clearall");
-
-    if (mnaMatrix.length == 1) {
-      Algebrite.eval(`mna_vo_vi = 1/(${mnaMatrix[0]})`); //FIXME - is this correct? When is it hit, with Iin?
-    } else {
-      Algebrite.eval(`mna = [${matrixStr}]`);
-      Algebrite.eval("inv_mna = inv(mna)");
-      if (resIndex2.length == 0) {
-        Algebrite.eval(`mna_vo_vi = inv_mna[${resIndex[0]}][${resIndex[1]}]`);
-      } else {
-        Algebrite.eval(`mna_vo_vi = inv_mna[${resIndex[0]}][${resIndex[1]}] - inv_mna[${resIndex2[0]}][${resIndex2[1]}]`);
-      }
-    }
-
-    var strOut = Algebrite.eval("mna_vo_vi").toString(); //4ms
-
-    const [textResult, mathml] = simplify_algebra(strOut);
-
-    Algebrite.eval("complex_response = subst(s*i,s,mna_vo_vi)");
-    Algebrite.eval("abs_complex_response = abs(complex_response)");
-
-    const complex_response = Algebrite.eval("abs_complex_response").toString();
-
-    return [textResult, mathml, complex_response];
-  } catch (err) {
-    console.log("Building MNA matrix failed with this error:", err);
-    return ["", "", ""];
-  }
-}
-
 // all these equations are based on
 // https://lpsa.swarthmore.edu/Systems/Electrical/mna/MNAAll.html
-export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedComponents, componentValuesSolved, pyodide, solver) {
+export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedComponents, componentValuesSolved, pyodide) {
   var i, vinNode, iinNode;
 
   //Are we plotting current or voltage?
@@ -206,34 +172,20 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
   }
   var numericResult, textResult, mathml, complex_response, numericText;
 
-  if (solver === "algebrite") {
-    [textResult, mathml, complex_response] = await solveWithAlgebrite(nerdStr, mnaMatrix, resIndex, resIndex2);
-  } else {
-    [textResult, mathml, complex_response, numericResult, numericText] = await solveWithSymPy(nerdStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide);
-  }
+  [textResult, mathml, complex_response, numericResult, numericText] = await solveWithSymPy(nerdStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide);
 
   return [textResult, mathml, complex_response, numericResult, numericText];
 }
 
 export async function calcBilinear(solver) {
-  if (solver) {
-    const sympyString = `
+  const sympyString = `
 T, Z = symbols("T Z")
 bilinear = result_simplified.subs(s,(2/T)*(Z-1)/(Z+1))
 bilinear_simp = simplify(bilinear)
 str(bilinear_simp), mathml(bilinear_simp, printer='presentation')
 `;
-    const [res, mathml] = await solver.runPythonAsync(sympyString);
-    // console.log("bilinear transform", res, mathml);
+  const [res, mathml] = await solver.runPythonAsync(sympyString);
+  // console.log("bilinear transform", res, mathml);
 
-    return [res, removeFenced(mathml)];
-  } else {
-    Algebrite.eval("bilinear = subst((2/T)*(Z-1)/(Z+1),s,mna_vo_vi)");
-    try {
-      return simplify_algebra(Algebrite.eval("bilinear").toString());
-    } catch (err) {
-      console.log(err);
-      return ["", "<mtext>Having trouble calculating bilinear transform</mtext>"];
-    }
-  }
+  return [res, removeFenced(mathml)];
 }

@@ -1,36 +1,44 @@
 import Button from "@mui/material/Button";
-import Stack from "@mui/material/Stack";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { build_and_solve_mna } from "./new_solveMNA.js";
-import { styled } from "@mui/material/styles";
-import Tooltip, { tooltipClasses } from "@mui/material/Tooltip";
 import CircularProgress from "@mui/material/CircularProgress";
 import { initPyodideAndSympy } from "./pyodideLoader";
 import { emptyResults } from "./common.js"; // Import the emptyResults object
-
-const HtmlTooltip = styled(({ className, ...props }) => <Tooltip {...props} classes={{ popper: className }} />)(({ theme }) => ({
-  [`& .${tooltipClasses.tooltip}`]: {
-    backgroundColor: "#f5f5f9",
-    color: "rgba(0, 0, 0, 0.87)",
-    maxWidth: 220,
-    fontSize: theme.typography.pxToRem(12),
-    border: "1px solid #dadde9",
-  },
-}));
 
 function formatMathML(mathml, p, drivers) {
   return `<math><mfrac><mrow><mi>${p}</mi></mrow><mrow><msub><mi>${drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${mathml}</math>`;
 }
 
 export function ChoseTF({ setResults, nodes, fullyConnectedComponents, componentValuesSolved, setUnsolveSnackbar }) {
-  const [algebraic, setAlgebraic] = useState("algebrite");
   const [loading, setLoading] = useState(false);
+  const [calculating, setCalculating] = useState(false);
   const [loadedPyo, setLoadedPyo] = useState(null);
-  // const algebraic = "algebraic";
+
+  // Auto-initialize Pyodide on component mount
+  useEffect(() => {
+    let isMounted = true;
+    const initializePyodide = async () => {
+      setLoading(true);
+      try {
+        const pyodide = await initPyodideAndSympy();
+        if (isMounted) {
+          setLoadedPyo(pyodide);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Failed to initialize Pyodide:", err);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    initializePyodide();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const probes = [];
   const drivers = [];
   for (const c in fullyConnectedComponents) if (["vin", "iin"].includes(fullyConnectedComponents[c].type)) drivers.push(fullyConnectedComponents[c].type);
@@ -70,22 +78,21 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
                 <Button
                   key={p}
                   variant="contained"
-                  loading={loading}
+                  disabled={loading || !loadedPyo || calculating}
                   color="info"
                   fullWidth
                   sx={{ py: 1, justifyContent: "center", fontSize: "1.4em" }}
                   onClick={async () => {
-                    setLoading(true);
+                    setCalculating(true);
                     setResults({ ...emptyResults }); // Reset results to empty
                     //this console log is for collecting data for testing
-                    // console.log(nodes.length, int_probes, fullyConnectedComponents, valueForAlgebra, loadedPyo, algebraic);
+                    // console.log(nodes.length, int_probes, fullyConnectedComponents, valueForAlgebra, loadedPyo);
                     const [textResult, mathml, complex_response, numericResult, numericText] = await build_and_solve_mna(
                       nodes.length,
                       int_probes,
                       fullyConnectedComponents,
                       valueForAlgebra,
                       loadedPyo,
-                      algebraic,
                     );
                     if (textResult === "" && mathml === "" && complex_response === "") {
                       setUnsolveSnackbar((x) => {
@@ -105,82 +112,38 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
                       numericText: numericText,
                       solver: loadedPyo,
                     });
-                    setLoading(false);
+                    setCalculating(false);
                     // setTextResult(textResult);
                     // setMathML(editedMathMl);
                     // setComplexResponse(complex_response);
                   }}
                 >
-                  <math xmlns="http://www.w3.org/1998/Math/MathML">
-                    <mfrac>
-                      <mi>{p}</mi>
-                      {drivers[0] == "vin" ? (
-                        <msub>
-                          <mi>V</mi>
-                          <mi>in</mi>
-                        </msub>
-                      ) : (
-                        <msub>
-                          <mi>I</mi>
-                          <mi>in</mi>
-                        </msub>
-                      )}
-                    </mfrac>
-                  </math>
+                  {loading ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <math xmlns="http://www.w3.org/1998/Math/MathML">
+                      <mfrac>
+                        <mi>{p}</mi>
+                        {drivers[0] == "vin" ? (
+                          <msub>
+                            <mi>V</mi>
+                            <mi>in</mi>
+                          </msub>
+                        ) : (
+                          <msub>
+                            <mi>I</mi>
+                            <mi>in</mi>
+                          </msub>
+                        )}
+                      </mfrac>
+                    </math>
+                  )}
                 </Button>
               </Grid>
             );
           })}
         </>
       )}
-      {/* Enable this feature if this ticket gets solved! https://github.com/Yaffle/Expression/issues/15 */}
-      <Box display="flex" gap={1}>
-        <ToggleButtonGroup color="primary" value={algebraic} exclusive>
-          <HtmlTooltip
-            title={
-              <>
-                <h6>Chose Algebra solver</h6>
-                {"These are JavaScript based solvers. It's already loaded and is fine for most cases"}
-              </>
-            }
-          >
-            <ToggleButton
-              value="algebrite"
-              onClick={() => {
-                setResults({ ...emptyResults });
-                setLoadedPyo(null);
-                setAlgebraic("algebrite");
-              }}
-            >
-              {loading ? <CircularProgress size={20} color="inherit" /> : "Algebrite + Yaffle"}
-            </ToggleButton>
-          </HtmlTooltip>
-          <HtmlTooltip
-            title={
-              <>
-                <h6>Chose Algebra solver</h6>
-                {
-                  "This is a Python based solver. Chosing this will download 10MB of files and run Python inside the browser, enabling more features such as giving a pretty numeric result, and more advanced algebraic simplification."
-                }
-              </>
-            }
-          >
-            <ToggleButton
-              value="sympy"
-              onClick={async () => {
-                setLoading(true);
-                setResults({ ...emptyResults });
-                const pyodide = await initPyodideAndSympy();
-                setLoadedPyo(pyodide);
-                setLoading(false);
-                setAlgebraic("sympy");
-              }}
-            >
-              {loading ? <CircularProgress size={20} color="inherit" /> : "SymPy"}
-            </ToggleButton>
-          </HtmlTooltip>
-        </ToggleButtonGroup>
-      </Box>
     </Grid>
   );
 }

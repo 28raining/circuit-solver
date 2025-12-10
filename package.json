@@ -17,8 +17,6 @@
     "@hyvor/hyvor-talk-react": "^1.0.2",
     "@mui/icons-material": "^7.3.1",
     "@mui/material": "^7.3.1",
-    "@yaffle/expression": "^0.0.47",
-    "algebrite": "^1.4.0",
     "bootstrap": "^5.3.8",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",

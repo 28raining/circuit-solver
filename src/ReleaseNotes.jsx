@@ -68,6 +68,19 @@ function ReleaseNotes() {
                   simplify an algebraic matrix. However, SymPy can simplify better, and can swap out the algebra to make pretty numberic results
                 </TableCell>
               </TableRow>
+              <TableRow>
+                <TableCell>
+                  <Typography>v2.1</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography>December 2025</Typography>
+                </TableCell>
+                <TableCell>
+                  <ul>
+                    <li>Removed Algebrite solver - now only using SymPy</li>
+                  </ul>
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </AccordionDetails>

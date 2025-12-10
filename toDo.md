@@ -1,3 +1,8 @@
+# Todo Dec 3rd
+
+- Remove algebrite
+- Move solving into Sympy, then can get mag and phase
+
 # Todo Oct 23rd
 
 - Update all the packages - once Sympy 1.13.4 is integrated to Pyodide!
