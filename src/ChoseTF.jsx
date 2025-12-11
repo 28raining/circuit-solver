@@ -87,30 +87,31 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
                     setResults({ ...emptyResults }); // Reset results to empty
                     //this console log is for collecting data for testing
                     // console.log(nodes.length, int_probes, fullyConnectedComponents, valueForAlgebra, loadedPyo);
-                    const [textResult, mathml, complex_response, numericResult, numericText] = await build_and_solve_mna(
+                    const [textResult, mathml] = await build_and_solve_mna(
                       nodes.length,
                       int_probes,
                       fullyConnectedComponents,
                       valueForAlgebra,
                       loadedPyo,
                     );
-                    if (textResult === "" && mathml === "" && complex_response === "") {
+                    if (textResult === "" && mathml === "") {
                       setUnsolveSnackbar((x) => {
                         if (!x) return true;
                         else return x;
                       });
                     }
                     const editedMathMl = formatMathML(mathml, p, drivers);
-                    const editedMathMlNumeric = formatMathML(numericResult, p, drivers);
                     setResults({
                       text: textResult,
                       mathML: editedMathMl,
-                      complexResponse: complex_response,
+                      complexResponse: "",
                       bilinearRaw: "",
                       bilinearMathML: "",
-                      numericML: editedMathMlNumeric,
-                      numericText: numericText,
+                      numericML: "",
+                      numericText: "",
                       solver: loadedPyo,
+                      probeName: p,
+                      drivers: drivers,
                     });
                     setCalculating(false);
                     // setTextResult(textResult);

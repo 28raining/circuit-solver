@@ -25,25 +25,18 @@ ${
     : `mna_vo_vi = mna_inv[${resIndex[0] - 1}, ${resIndex[1] - 1}] - mna_inv[${resIndex2[0] - 1}, ${resIndex2[1] - 1}]`
 }`
 }
-mna_vo_vi_complex = mna_vo_vi.subs(s, s*I)
 
 result_simplified = simplify(mna_vo_vi)
-result_numeric = result_simplified.subs(${JSON.stringify(componentValuesSolved).replaceAll('"', "")})
-result_numeric_simplified = simplify(result_numeric)
-result_numeric_complex = result_numeric_simplified.subs(s, s*I)
-rx = Abs(result_numeric_complex)
 
-str(result_simplified), mathml(result_simplified, printer='presentation'), str(rx), mathml(result_numeric_simplified, printer='presentation'), str(result_numeric_simplified)
+str(result_simplified), mathml(result_simplified, printer='presentation')
 `;
   try {
-    const [textResult, mathml, complex_response, numericML, numericText] = await pyodide.runPythonAsync(sympyString);
-    const newNumeric = numericML;
-    const newNumericText = numericText.replaceAll("**", "^");
+    const [textResult, mathml] = await pyodide.runPythonAsync(sympyString);
 
-    return [textResult, removeFenced(mathml), complex_response, removeFenced(newNumeric), newNumericText];
+    return [textResult, removeFenced(mathml)];
   } catch (err) {
     console.log("Solving MNA matrix failed with this error:", err);
-    return ["", "", "", "", ""];
+    return ["", ""];
   }
 }
 
@@ -170,11 +163,11 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
       else resIndex2.push(voutNode2 + 1, iinNode + 1);
     }
   }
-  var numericResult, textResult, mathml, complex_response, numericText;
+  var textResult, mathml;
 
-  [textResult, mathml, complex_response, numericResult, numericText] = await solveWithSymPy(nerdStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide);
+  [textResult, mathml] = await solveWithSymPy(nerdStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide);
 
-  return [textResult, mathml, complex_response, numericResult, numericText];
+  return [textResult, mathml];
 }
 
 export async function calcBilinear(solver) {
@@ -188,4 +181,64 @@ str(bilinear_simp), mathml(bilinear_simp, printer='presentation')
   // console.log("bilinear transform", res, mathml);
 
   return [res, removeFenced(mathml)];
+}
+
+export async function new_calculate_tf(pyodide, fRange, numSteps, componentValuesSolved, setErrorSnackbar) {
+  if (!pyodide) return { freq_new: [], mag_new: [], numericML: "", numericText: "" };
+
+  // Generate frequency array (logarithmic steps)
+  var fstepdB_20 = Math.log10(fRange.fmax / fRange.fmin) / numSteps;
+  var fstep = 10 ** fstepdB_20;
+  const freq = [];
+  for (var f = fRange.fmin; f < fRange.fmax; f = f * fstep) {
+    freq.push(f);
+  }
+
+  try {
+    // Use sympy to calculate magnitudes for all frequencies and numeric representation
+    const sympyString = `
+from sympy import pi
+import math
+
+result_numeric = result_simplified.subs(${JSON.stringify(componentValuesSolved).replaceAll('"', "")})
+result_numeric_simplified = simplify(result_numeric)
+
+# Calculate numeric MathML and text representation
+numeric_mathml = mathml(result_numeric_simplified, printer='presentation')
+numeric_text = str(result_numeric_simplified)
+
+freq_array = ${JSON.stringify(freq)}
+mag_array = []
+
+for f in freq_array:
+    s_val = 2 * pi * f * I
+    result_numeric_complex = result_numeric_simplified.subs(s, s_val)
+    mag = Abs(result_numeric_complex)
+    # Convert to dB: 20*log10(mag)
+    # Use Python's math.log10 for numeric evaluation
+    mag_eval = float(mag.evalf())
+    if mag_eval > 0:
+        mag_db = 20 * math.log10(mag_eval)
+    else:
+        mag_db = float('-inf')
+    mag_array.append(mag_db)
+
+(numeric_mathml, numeric_text, mag_array)
+`;
+    const [numericML, numericText, mag] = await pyodide.runPythonAsync(sympyString);
+    
+    return { 
+      freq_new: freq, 
+      mag_new: Array.from(mag),
+      numericML: removeFenced(numericML),
+      numericText: numericText.replaceAll("**", "^")
+    };
+  } catch (err) {
+    setErrorSnackbar((x) => {
+      if (!x) return true;
+      else return x;
+    });
+    console.log("Error calculating transfer function:", err);
+    return { freq_new: [], mag_new: [], numericML: "", numericText: "" };
+  }
 }

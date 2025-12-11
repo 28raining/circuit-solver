@@ -174,4 +174,4 @@ export const theme = createTheme({
   },
 });
 
-export const emptyResults = { text: "", mathML: "", complexResponse: "", bilinearRaw: "", bilinearMathML: "", numericML: "", numericText: "", solver: null };
+export const emptyResults = { text: "", mathML: "", complexResponse: "", bilinearRaw: "", bilinearMathML: "", numericML: "", numericText: "", solver: null, probeName: "", drivers: [] };

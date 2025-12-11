@@ -9,7 +9,7 @@ import { ComponentAdjuster } from "./ComponentAdjuster.jsx";
 import { FreqAdjusters } from "./FreqAdjusters.jsx";
 // import Grid from "@mui/material/Grid";
 import { units } from "./common.js";
-import { calcBilinear } from "./new_solveMNA.js";
+import { calcBilinear, new_calculate_tf } from "./new_solveMNA.js";
 
 import { NavBar } from "./NavBar.jsx";
 import { ChoseTF } from "./ChoseTF.jsx";
@@ -93,58 +93,6 @@ function stateFromURL() {
 }
 const [modifiedComponents, modifiedSettings, modifiedSchematic] = stateFromURL();
 
-function new_calculate_tf(textResult, fRange, numSteps, components, setErrorSnackbar) {
-  // console.log("new_calculate_tf", { textResult, fRange, numSteps, components });
-  if (textResult == "") return { freq_new: [], mag_new: [] };
-  var complex_freq = textResult;
-  var rep;
-  for (const key in components) {
-    rep = RegExp(key, "g");
-    complex_freq = complex_freq.replace(rep, components[key]);
-  }
-
-  //Now only remaining variable is S, substitute that and solve. Also swap power ^ for **
-  const re = /s/gi;
-  const reDollar = /\$/gi;
-  const re2 = /\^/gi;
-  var res = complex_freq.replace(re2, "**"); //swap ^ for **
-  // const re3 = /abs/gi; //sometimes abs(C0) is left in the equation
-  // res = res.replace(re3, "");
-  //now swap sqrt for '$'
-  const re3 = /sqrt/gi; //sometimes abs(C0) is left in the equation
-  res = res.replace(re3, "$"); //swap sqrt for $
-  const re4 = /abs/gi;
-  res = res.replace(re4, ""); //swap Abs(...) for (...). I saw one case where Sympy left it in but it's ok to remove it like this
-  const re5 = /I/gi;
-  res = res.replace(re5, "1"); //swap I for 1. Sometimes sympy leaves in the I if the result is fully imaginary. This is dangerous and instead the numeric solving should go inside sympy
-
-  var fstepdB_20 = Math.log10(fRange.fmax / fRange.fmin) / numSteps;
-  var fstep = 10 ** fstepdB_20;
-  var absNew, evalNew;
-  const freq = [];
-  const mag = [];
-  try {
-    for (var f = fRange.fmin; f < fRange.fmax; f = f * fstep) {
-      freq.push(f);
-      // const mathString = res.replace(re, 2 * Math.PI * f).replace(/\*\*/g, "^");
-      // evalNew = evaluate(mathString);
-      const mathString = res.replace(re, 2 * Math.PI * f).replace(reDollar, "Math.sqrt");
-      evalNew = eval(mathString);
-
-      absNew = Math.abs(evalNew);
-      mag.push(20 * Math.log10(absNew));
-    }
-  } catch (err) {
-    setErrorSnackbar((x) => {
-      if (!x) return true;
-      else return x;
-    });
-    console.log("oh no", err);
-  }
-
-  return { freq_new: freq, mag_new: mag };
-}
-
 function compToURL(key, value) {
   return `${key}_${value.type}_${value.value}_${value.unit}`;
 }
@@ -153,7 +101,7 @@ function App() {
   const [nodes, setNodes] = useState([]);
 
   const [fullyConnectedComponents, setFullyConnectedComponents] = useState({});
-  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", bilinearRaw: "", bilinearMathML: "" });
+  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", bilinearRaw: "", bilinearMathML: "", numericML: "", numericText: "", solver: null, probeName: "", drivers: [] });
   const [componentValues, setComponentValues] = useState(modifiedComponents);
   const [settings, setSettings] = useState(modifiedSettings);
   const [schemHistory, setSchemHistory] = useState({ pointer: 0, state: [modifiedSchematic] });
@@ -247,12 +195,29 @@ function App() {
   const [freq_new, setFreqNew] = useState(null);
   const [mag_new, setMagNew] = useState(null);
   useEffect(() => {
-    const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
-    const componentValuesSolved2 = {};
-    for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
-    const { freq_new, mag_new } = new_calculate_tf(results.complexResponse, fRange, settings.resolution, componentValuesSolved2, setErrorSnackbar);
-    setFreqNew(freq_new);
-    setMagNew(mag_new);
+    const calculateTF = async () => {
+      if (!results.solver || results.text === "") {
+        setFreqNew([]);
+        setMagNew([]);
+        return;
+      }
+      const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
+      const componentValuesSolved2 = {};
+      for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
+      const { freq_new, mag_new, numericML, numericText } = await new_calculate_tf(results.solver, fRange, settings.resolution, componentValuesSolved2, setErrorSnackbar);
+      setFreqNew(freq_new);
+      setMagNew(mag_new);
+      if (numericML && numericText && results.probeName && results.drivers) {
+        // Format numericML with probe name and drivers (same as formatMathML in ChoseTF.jsx)
+        const formattedNumericML = `<math><mfrac><mrow><mi>${results.probeName}</mi></mrow><mrow><msub><mi>${results.drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${numericML}</math>`;
+        setResults((prevResults) => ({
+          ...prevResults,
+          numericML: formattedNumericML,
+          numericText: numericText,
+        }));
+      }
+    };
+    calculateTF();
   }, [results, settings, componentValues]);
 
   function stateToURL() {
