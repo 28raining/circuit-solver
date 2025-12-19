@@ -77,7 +77,9 @@ function ReleaseNotes() {
                 </TableCell>
                 <TableCell>
                   <ul>
+                    <li>Plotting phase, before only amplitude was plotted</li>
                     <li>Removed Algebrite solver - now only using SymPy</li>
+                    <li>Fixed issue where iprobe was grounded</li>
                   </ul>
                 </TableCell>
               </TableRow>

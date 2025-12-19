@@ -1,8 +1,9 @@
-
 # Todo Oct 23rd
+
 - Update all the packages - once Sympy 1.13.4 is integrated to Pyodide!
 
 # visiojs todo
+
 - Move the matrix solver into a web worker. So if can be killed with a timeout
 
 ## New todo with visiojs
@@ -32,7 +33,6 @@
 - Remove algebrite
 - Move solving into Sympy, then can get mag and phase
 - Use sympy only, move the frequency solving in there too (so it cal calcuate abs more reliably)
-
 
 # Done October 2025
 

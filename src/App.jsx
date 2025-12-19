@@ -8,7 +8,7 @@ import { VisioJSSchematic } from "./VisioJSSchematic.jsx";
 import { ComponentAdjuster } from "./ComponentAdjuster.jsx";
 import { FreqAdjusters } from "./FreqAdjusters.jsx";
 // import Grid from "@mui/material/Grid";
-import { units } from "./common.js";
+import { units, formatMathML } from "./common.js";
 import { calcBilinear, new_calculate_tf } from "./new_solveMNA.js";
 
 import { NavBar } from "./NavBar.jsx";
@@ -230,12 +230,8 @@ function App() {
         setMagNew(mag_new);
         setPhaseNew(phase_new);
         if (numericML && numericText && results.probeName && results.drivers) {
-          // Format numericML with probe name and drivers (same as formatMathML in ChoseTF.jsx)
-          const formattedNumericML = `<math><mfrac><mrow><mi>${results.probeName}</mi></mrow><mrow><msub><mi>${results.drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${numericML}</math>`;
-          setNumericResults({
-            numericML: formattedNumericML,
-            numericText: numericText,
-          });
+          const formattedNumericML = formatMathML(numericML, results.probeName, results.drivers);
+          setNumericResults({ numericML: formattedNumericML, numericText: numericText });
         }
       };
       calculateTF();

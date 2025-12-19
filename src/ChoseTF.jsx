@@ -5,11 +5,7 @@ import { useState, useEffect } from "react";
 import { build_and_solve_mna } from "./new_solveMNA.js";
 import CircularProgress from "@mui/material/CircularProgress";
 import { initPyodideAndSympy } from "./pyodideLoader";
-import { emptyResults } from "./common.js"; // Import the emptyResults object
-
-function formatMathML(mathml, p, drivers) {
-  return `<math><mfrac><mrow><mi>${p}</mi></mrow><mrow><msub><mi>${drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${mathml}</math>`;
-}
+import { emptyResults, formatMathML } from "./common.js"; // Import the emptyResults object
 
 export function ChoseTF({ setResults, nodes, fullyConnectedComponents, componentValuesSolved, setUnsolveSnackbar }) {
   const [loading, setLoading] = useState(false);
