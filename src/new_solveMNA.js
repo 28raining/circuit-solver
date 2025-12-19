@@ -243,7 +243,7 @@ phase_list = [float(x) for x in phase_array]
     const numericText = result[1];
     const mag = result[2];
     const phase = result[3];
-    
+
     // Convert Pyodide arrays to JavaScript arrays - extract values immediately to avoid proxy exhaustion
     const magArray = [];
     const phaseArray = [];
@@ -253,12 +253,12 @@ phase_list = [float(x) for x in phase_array]
     for (let i = 0; i < phase.length; i++) {
       phaseArray.push(Number(phase[i]));
     }
-    return { 
-      freq_new: freq, 
+    return {
+      freq_new: freq,
       mag_new: magArray,
       phase_new: phaseArray,
       numericML: removeFenced(String(numericML)),
-      numericText: String(numericText).replaceAll("**", "^")
+      numericText: String(numericText).replaceAll("**", "^"),
     };
   } catch (err) {
     setErrorSnackbar((x) => {

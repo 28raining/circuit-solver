@@ -69,7 +69,8 @@ test("voltage in current probe - 2", async () => {
     R0: 10000,
     C0: 1.0000000000000002e-14,
   };
-  const [textResult, _mathml, complex_response, _numericResult, numericText] = await build_and_solve_mna(3, ["Y0"], components, values, pyodide);
+  const [textResult, _mathml] = await build_and_solve_mna(3, ["Y0"], components, values, pyodide);
+  const { numericText } = await new_calculate_tf(pyodide, { fmin: 1, fmax: 1000 }, 10, values, () => {});
   expect(textResult).toEqual("C0*L0*s**2/(C0*L0*R0*s**2 + L0*s + R0)");
   // expect(_mathml).toEqual(null);
   // expect(complex_response).toEqual("1.0e-24*s**2/sqrt(1.0e-40*s**4 - 1.0e-20*s**2 + 1)");

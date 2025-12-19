@@ -87,13 +87,7 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
                     setResults({ ...emptyResults }); // Reset results to empty
                     //this console log is for collecting data for testing
                     // console.log(nodes.length, int_probes, fullyConnectedComponents, valueForAlgebra, loadedPyo);
-                    const [textResult, mathml] = await build_and_solve_mna(
-                      nodes.length,
-                      int_probes,
-                      fullyConnectedComponents,
-                      valueForAlgebra,
-                      loadedPyo,
-                    );
+                    const [textResult, mathml] = await build_and_solve_mna(nodes.length, int_probes, fullyConnectedComponents, valueForAlgebra, loadedPyo);
                     if (textResult === "" && mathml === "") {
                       setUnsolveSnackbar((x) => {
                         if (!x) return true;

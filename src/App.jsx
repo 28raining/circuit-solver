@@ -219,7 +219,13 @@ function App() {
         const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
         const componentValuesSolved2 = {};
         for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
-        const { freq_new, mag_new, phase_new, numericML, numericText } = await new_calculate_tf(results.solver, fRange, settings.resolution, componentValuesSolved2, setErrorSnackbar);
+        const { freq_new, mag_new, phase_new, numericML, numericText } = await new_calculate_tf(
+          results.solver,
+          fRange,
+          settings.resolution,
+          componentValuesSolved2,
+          setErrorSnackbar,
+        );
         setFreqNew(freq_new);
         setMagNew(mag_new);
         setPhaseNew(phase_new);

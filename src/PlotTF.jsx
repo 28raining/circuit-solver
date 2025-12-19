@@ -13,12 +13,12 @@ const MyEChartsPlot = ({ freq_new, mag_new, phase_new, hasResults }) => {
       </Box>
     );
   }
-  
+
   // Show no data message if arrays are empty and we don't have results
   if (!freq_new || !mag_new || freq_new.length === 0 || mag_new.length === 0) {
     return <b>No data available for plot</b>;
   }
-  
+
   // Convert linear magnitude to dB
   const mag_db = mag_new.map((mag) => {
     if (mag > 0) {
@@ -27,12 +27,10 @@ const MyEChartsPlot = ({ freq_new, mag_new, phase_new, hasResults }) => {
       return -Infinity;
     }
   });
-  
+
   // Convert phase from radians to degrees
-  const phase_deg = phase_new && phase_new.length > 0 
-    ? phase_new.map((phase_rad) => (phase_rad * 180) / Math.PI)
-    : [];
-  
+  const phase_deg = phase_new && phase_new.length > 0 ? phase_new.map((phase_rad) => (phase_rad * 180) / Math.PI) : [];
+
   const option = {
     tooltip: {
       trigger: "axis",
