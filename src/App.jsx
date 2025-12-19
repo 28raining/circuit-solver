@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./App.css";
 import "visiojs/dist/visiojs.css"; // Import VisioJS styles
 // import { startupSchematic } from "./startupSchematic.js";
@@ -197,33 +197,50 @@ function App() {
   const [freq_new, setFreqNew] = useState(null);
   const [mag_new, setMagNew] = useState(null);
   const [phase_new, setPhaseNew] = useState(null);
+  const debounceTimerRef = useRef(null);
+
   useEffect(() => {
-    const calculateTF = async () => {
-      if (!results.solver || results.text === "") {
-        setFreqNew([]);
-        setMagNew([]);
-        setPhaseNew([]);
-        setNumericResults({ numericML: "", numericText: "" });
-        setBilinearResults({ bilinearML: "", bilinearText: "" });
-        return;
-      }
-      const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
-      const componentValuesSolved2 = {};
-      for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
-      const { freq_new, mag_new, phase_new, numericML, numericText } = await new_calculate_tf(results.solver, fRange, settings.resolution, componentValuesSolved2, setErrorSnackbar);
-      setFreqNew(freq_new);
-      setMagNew(mag_new);
-      setPhaseNew(phase_new);
-      if (numericML && numericText && results.probeName && results.drivers) {
-        // Format numericML with probe name and drivers (same as formatMathML in ChoseTF.jsx)
-        const formattedNumericML = `<math><mfrac><mrow><mi>${results.probeName}</mi></mrow><mrow><msub><mi>${results.drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${numericML}</math>`;
-        setNumericResults({
-          numericML: formattedNumericML,
-          numericText: numericText,
-        });
+    // Clear any existing timeout
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set a new timeout to debounce the calculation
+    debounceTimerRef.current = setTimeout(async () => {
+      const calculateTF = async () => {
+        if (!results.solver || results.text === "") {
+          setFreqNew([]);
+          setMagNew([]);
+          setPhaseNew([]);
+          setNumericResults({ numericML: "", numericText: "" });
+          setBilinearResults({ bilinearML: "", bilinearText: "" });
+          return;
+        }
+        const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
+        const componentValuesSolved2 = {};
+        for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
+        const { freq_new, mag_new, phase_new, numericML, numericText } = await new_calculate_tf(results.solver, fRange, settings.resolution, componentValuesSolved2, setErrorSnackbar);
+        setFreqNew(freq_new);
+        setMagNew(mag_new);
+        setPhaseNew(phase_new);
+        if (numericML && numericText && results.probeName && results.drivers) {
+          // Format numericML with probe name and drivers (same as formatMathML in ChoseTF.jsx)
+          const formattedNumericML = `<math><mfrac><mrow><mi>${results.probeName}</mi></mrow><mrow><msub><mi>${results.drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${numericML}</math>`;
+          setNumericResults({
+            numericML: formattedNumericML,
+            numericText: numericText,
+          });
+        }
+      };
+      calculateTF();
+    }, 1000); // Wait 1000ms after the user stops typing
+
+    // Cleanup function to clear timeout on unmount or when dependencies change
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
     };
-    calculateTF();
   }, [results, settings, componentValues]);
 
   function stateToURL() {
