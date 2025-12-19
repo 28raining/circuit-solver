@@ -62,6 +62,12 @@ const MyEChartsPlot = ({ freq_new, mag_new, phase_new, hasResults }) => {
         return tooltipContent;
       },
     },
+    legend: {
+      show: true,
+      data: ["Amplitude", ...(phase_deg.length > 0 ? ["Phase"] : [])],
+      top: "top",
+      right: "right",
+    },
     xAxis: {
       min: freq_new[0], // set your desired min frequency (Hz)
       max: freq_new[freq_new.length - 1], // set your desired max frequency (Hz)
@@ -132,6 +138,10 @@ const MyEChartsPlot = ({ freq_new, mag_new, phase_new, hasResults }) => {
               smooth: false,
               lineStyle: {
                 width: 2,
+                color: "red",
+              },
+              itemStyle: {
+                color: "red",
               },
             },
           ]
