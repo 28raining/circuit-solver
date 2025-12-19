@@ -101,7 +101,9 @@ function App() {
   const [nodes, setNodes] = useState([]);
 
   const [fullyConnectedComponents, setFullyConnectedComponents] = useState({});
-  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", bilinearRaw: "", bilinearMathML: "", numericML: "", numericText: "", solver: null, probeName: "", drivers: [] });
+  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", solver: null, probeName: "", drivers: [] });
+  const [numericResults, setNumericResults] = useState({ numericML: "", numericText: "" });
+  const [bilinearResults, setBilinearResults] = useState({ bilinearML: "", bilinearText: "" });
   const [componentValues, setComponentValues] = useState(modifiedComponents);
   const [settings, setSettings] = useState(modifiedSettings);
   const [schemHistory, setSchemHistory] = useState({ pointer: 0, state: [modifiedSchematic] });
@@ -199,6 +201,8 @@ function App() {
       if (!results.solver || results.text === "") {
         setFreqNew([]);
         setMagNew([]);
+        setNumericResults({ numericML: "", numericText: "" });
+        setBilinearResults({ bilinearML: "", bilinearText: "" });
         return;
       }
       const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
@@ -210,11 +214,10 @@ function App() {
       if (numericML && numericText && results.probeName && results.drivers) {
         // Format numericML with probe name and drivers (same as formatMathML in ChoseTF.jsx)
         const formattedNumericML = `<math><mfrac><mrow><mi>${results.probeName}</mi></mrow><mrow><msub><mi>${results.drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${numericML}</math>`;
-        setResults((prevResults) => ({
-          ...prevResults,
+        setNumericResults({
           numericML: formattedNumericML,
           numericText: numericText,
-        }));
+        });
       }
     };
     calculateTF();
@@ -249,9 +252,10 @@ function App() {
   async function handleRequestBilin() {
     // console.log("handleRequestBilin", calcBilinear());
     const [raw, bilin] = await calcBilinear(results.solver);
-    // setBilinearMathML(`<math>${bilin}</math>`);
-    // setBilinearRaw(raw);
-    setResults({ ...results, bilinearRaw: raw, bilinearMathML: `<math>${bilin}</math>` });
+    setBilinearResults({
+      bilinearML: `<math>${bilin}</math>`,
+      bilinearText: raw,
+    });
   }
   // console.log(results);
 
@@ -299,14 +303,14 @@ function App() {
             {results.text != "" && (
               <>
                 <DisplayMathML title="Laplace Transform" textResult={results.text} mathML={results.mathML} caclDone={results.text != ""} />
-                {results.numericText != null && (
-                  <DisplayMathML title="Laplace Transform (numeric)" textResult={results.numericText} mathML={results.numericML} caclDone={results.text != ""} />
+                {numericResults.numericText != null && numericResults.numericText !== "" && (
+                  <DisplayMathML title="Laplace Transform (numeric)" textResult={numericResults.numericText} mathML={numericResults.numericML} caclDone={results.text != ""} />
                 )}
                 <div className="col-12">
                   <MyChart freq_new={freq_new} mag_new={mag_new} />
                 </div>
                 <FreqAdjusters settings={settings} setSettings={setSettings} />
-                {results.bilinearMathML == "" ? (
+                {bilinearResults.bilinearML == "" ? (
                   <Grid container spacing={1}>
                     <Button
                       variant="contained"
@@ -320,7 +324,7 @@ function App() {
                     </Button>
                   </Grid>
                 ) : (
-                  <DisplayMathML title="Bilinear Transform" textResult={results.bilinearRaw} mathML={results.bilinearMathML} caclDone={results.text != ""} />
+                  <DisplayMathML title="Bilinear Transform" textResult={bilinearResults.bilinearText} mathML={bilinearResults.bilinearML} caclDone={results.text != ""} />
                 )}
               </>
             )}
