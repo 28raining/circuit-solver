@@ -184,7 +184,7 @@ str(bilinear_simp), mathml(bilinear_simp, printer='presentation')
 }
 
 export async function new_calculate_tf(pyodide, fRange, numSteps, componentValuesSolved, setErrorSnackbar) {
-  if (!pyodide) return { freq_new: [], mag_new: [], numericML: "", numericText: "" };
+  if (!pyodide) return { freq_new: [], mag_new: [], phase_new: [], numericML: "", numericText: "" };
 
   // Generate frequency array (logarithmic steps)
   var fstepdB_20 = Math.log10(fRange.fmax / fRange.fmin) / numSteps;
@@ -195,10 +195,8 @@ export async function new_calculate_tf(pyodide, fRange, numSteps, componentValue
   }
 
   try {
-    // Use sympy to calculate magnitudes for all frequencies and numeric representation
+    // Use sympy to calculate magnitudes and phases for all frequencies and numeric representation
     const sympyString = `
-from sympy import pi
-import math
 
 result_numeric = result_simplified.subs(${JSON.stringify(componentValuesSolved).replaceAll('"', "")})
 result_numeric_simplified = simplify(result_numeric)
@@ -209,27 +207,29 @@ numeric_text = str(result_numeric_simplified)
 
 freq_array = ${JSON.stringify(freq)}
 mag_array = []
+phase_array = []
 
 for f in freq_array:
     s_val = 2 * pi * f * I
     result_numeric_complex = result_numeric_simplified.subs(s, s_val)
     mag = Abs(result_numeric_complex)
-    # Convert to dB: 20*log10(mag)
-    # Use Python's math.log10 for numeric evaluation
+    # Return linear magnitude (conversion to dB will be done in JavaScript)
     mag_eval = float(mag.evalf())
-    if mag_eval > 0:
-        mag_db = 20 * math.log10(mag_eval)
-    else:
-        mag_db = float('-inf')
-    mag_array.append(mag_db)
+    mag_array.append(mag_eval)
+    
+    # Calculate phase in radians using sympy.arg (conversion to degrees will be done in JavaScript)
+    phase_rad = arg(result_numeric_complex)
+    phase_rad_eval = float(phase_rad.evalf())
+    phase_array.append(phase_rad_eval)
 
-(numeric_mathml, numeric_text, mag_array)
+(numeric_mathml, numeric_text, mag_array, phase_array)
 `;
-    const [numericML, numericText, mag] = await pyodide.runPythonAsync(sympyString);
+    const [numericML, numericText, mag, phase] = await pyodide.runPythonAsync(sympyString);
     
     return { 
       freq_new: freq, 
       mag_new: Array.from(mag),
+      phase_new: Array.from(phase),
       numericML: removeFenced(numericML),
       numericText: numericText.replaceAll("**", "^")
     };
@@ -239,6 +239,6 @@ for f in freq_array:
       else return x;
     });
     console.log("Error calculating transfer function:", err);
-    return { freq_new: [], mag_new: [], numericML: "", numericText: "" };
+    return { freq_new: [], mag_new: [], phase_new: [], numericML: "", numericText: "" };
   }
 }

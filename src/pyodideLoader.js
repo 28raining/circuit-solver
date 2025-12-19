@@ -13,8 +13,9 @@ export async function initPyodideAndSympy() {
   // await micropip.install('sympy');
   await pyodide.loadPackage("sympy");
   var initStr = `
-from sympy import Matrix, symbols, simplify, Abs, I, fraction, solve, arg
-from sympy.printing.mathml import mathml`;
+from sympy import Matrix, symbols, simplify, Abs, I, fraction, solve, arg, pi
+from sympy.printing.mathml import mathml
+import math`;
   await pyodide.runPythonAsync(initStr);
   return pyodide;
 }

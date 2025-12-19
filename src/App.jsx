@@ -196,11 +196,13 @@ function App() {
 
   const [freq_new, setFreqNew] = useState(null);
   const [mag_new, setMagNew] = useState(null);
+  const [phase_new, setPhaseNew] = useState(null);
   useEffect(() => {
     const calculateTF = async () => {
       if (!results.solver || results.text === "") {
         setFreqNew([]);
         setMagNew([]);
+        setPhaseNew([]);
         setNumericResults({ numericML: "", numericText: "" });
         setBilinearResults({ bilinearML: "", bilinearText: "" });
         return;
@@ -208,9 +210,10 @@ function App() {
       const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
       const componentValuesSolved2 = {};
       for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
-      const { freq_new, mag_new, numericML, numericText } = await new_calculate_tf(results.solver, fRange, settings.resolution, componentValuesSolved2, setErrorSnackbar);
+      const { freq_new, mag_new, phase_new, numericML, numericText } = await new_calculate_tf(results.solver, fRange, settings.resolution, componentValuesSolved2, setErrorSnackbar);
       setFreqNew(freq_new);
       setMagNew(mag_new);
+      setPhaseNew(phase_new);
       if (numericML && numericText && results.probeName && results.drivers) {
         // Format numericML with probe name and drivers (same as formatMathML in ChoseTF.jsx)
         const formattedNumericML = `<math><mfrac><mrow><mi>${results.probeName}</mi></mrow><mrow><msub><mi>${results.drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${numericML}</math>`;
@@ -307,7 +310,7 @@ function App() {
                   <DisplayMathML title="Laplace Transform (numeric)" textResult={numericResults.numericText} mathML={numericResults.numericML} caclDone={results.text != ""} />
                 )}
                 <div className="col-12">
-                  <MyChart freq_new={freq_new} mag_new={mag_new} />
+                  <MyChart freq_new={freq_new} mag_new={mag_new} phase_new={phase_new} hasResults={results.text !== ""} />
                 </div>
                 <FreqAdjusters settings={settings} setSettings={setSettings} />
                 {bilinearResults.bilinearML == "" ? (
