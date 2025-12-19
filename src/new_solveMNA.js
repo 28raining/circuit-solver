@@ -218,9 +218,14 @@ phase_array = []
 for f in freq_array:
     s_val = 2 * pi * f * 1j  # Use Python's 1j for complex number
     result_complex = numeric_func(s_val)
-    # Use Python's built-in abs() and cmath.phase() for fast numeric calculation
-    mag_array.append(abs(result_complex))
-    phase_array.append(cmath.phase(result_complex))
+    # Convert to plain Python complex to avoid SymPy/Pyodide overhead
+    result_complex = complex(result_complex)
+    # Use manual magnitude calculation which is faster than abs() on Pyodide proxies
+    mag_val = (result_complex.real**2 + result_complex.imag**2)**0.5
+    # Use Python's built-in cmath.phase() for fast numeric calculation
+    phase_val = cmath.phase(result_complex)
+    mag_array.append(mag_val)
+    phase_array.append(phase_val)
 
 # Convert to plain Python floats to avoid Pyodide proxy issues
 # Ensure all values are plain floats (not sympy objects)
@@ -248,7 +253,6 @@ phase_list = [float(x) for x in phase_array]
     for (let i = 0; i < phase.length; i++) {
       phaseArray.push(Number(phase[i]));
     }
-    
     return { 
       freq_new: freq, 
       mag_new: magArray,
