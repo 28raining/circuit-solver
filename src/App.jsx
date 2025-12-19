@@ -329,13 +329,12 @@ function App() {
             {results.text != "" && (
               <>
                 <DisplayMathML title="Laplace Transform" textResult={results.text} mathML={results.mathML} caclDone={results.text != ""} />
-                {numericResults.numericText != null && numericResults.numericText !== "" && (
-                  <DisplayMathML title="Laplace Transform (numeric)" textResult={numericResults.numericText} mathML={numericResults.numericML} caclDone={results.text != ""} />
-                )}
                 <div className="col-12">
                   <MyChart freq_new={freq_new} mag_new={mag_new} phase_new={phase_new} hasResults={results.text !== ""} />
                 </div>
                 <FreqAdjusters settings={settings} setSettings={setSettings} />
+                <DisplayMathML title="Laplace Transform (numeric)" textResult={numericResults.numericText} mathML={numericResults.numericML} caclDone={results.text != ""} />
+
                 {bilinearResults.bilinearML == "" ? (
                   <Grid container spacing={1}>
                     <Button
