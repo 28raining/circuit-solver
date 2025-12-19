@@ -4,9 +4,7 @@
 
 # visiojs todo
 
-- delete wire, redraw wire, then undo breaks
 - Move the matrix solver into a web worker. So if can be killed with a timeout
-- Use sympy only, move the frequency solving in there too (so it cal calcuate abs more reliably)
 
 ## New todo with visiojs
 
@@ -29,6 +27,12 @@
 5 - Draw amplitude response of those 3 transforms
 
 - if add op amp with zero on input and LC on output, and change input to current source, it crashes
+
+# Done Dec 2025
+
+- Remove algebrite
+- Move solving into Sympy, then can get mag and phase
+- Use sympy only, move the frequency solving in there too (so it cal calcuate abs more reliably)
 
 # Done October 2025
 

@@ -174,4 +174,8 @@ export const theme = createTheme({
   },
 });
 
-export const emptyResults = { text: "", mathML: "", complexResponse: "", bilinearRaw: "", bilinearMathML: "", numericML: "", numericText: "", solver: null };
+export const emptyResults = { text: "", mathML: "", complexResponse: "", solver: null, probeName: "", drivers: [] };
+
+export function formatMathML(mathml, p, drivers) {
+  return `<math><mfrac><mrow><mi>${p}</mi></mrow><mrow><msub><mi>${drivers[0] == "vin" ? "V" : "I"}</mi><mi>in</mi></msub></mrow></mfrac><mo>=</mo>${mathml}</math>`;
+}

@@ -1,5 +1,3 @@
-import * as Algebrite from "algebrite";
-import simplify_algebra from "./simplify_algebra.js";
 // import { loadPyodide } from "pyodide";
 // import { initPyodideAndSympy } from "./pyodideLoader";
 
@@ -27,63 +25,24 @@ ${
     : `mna_vo_vi = mna_inv[${resIndex[0] - 1}, ${resIndex[1] - 1}] - mna_inv[${resIndex2[0] - 1}, ${resIndex2[1] - 1}]`
 }`
 }
-mna_vo_vi_complex = mna_vo_vi.subs(s, s*I)
 
 result_simplified = simplify(mna_vo_vi)
-result_numeric = result_simplified.subs(${JSON.stringify(componentValuesSolved).replaceAll('"', "")})
-result_numeric_simplified = simplify(result_numeric)
-result_numeric_complex = result_numeric_simplified.subs(s, s*I)
-rx = Abs(result_numeric_complex)
 
-str(result_simplified), mathml(result_simplified, printer='presentation'), str(rx), mathml(result_numeric_simplified, printer='presentation'), str(result_numeric_simplified)
+str(result_simplified), mathml(result_simplified, printer='presentation')
 `;
   try {
-    const [textResult, mathml, complex_response, numericML, numericText] = await pyodide.runPythonAsync(sympyString);
-    const newNumeric = numericML;
-    const newNumericText = numericText.replaceAll("**", "^");
+    const [textResult, mathml] = await pyodide.runPythonAsync(sympyString);
 
-    return [textResult, removeFenced(mathml), complex_response, removeFenced(newNumeric), newNumericText];
+    return [textResult, removeFenced(mathml)];
   } catch (err) {
     console.log("Solving MNA matrix failed with this error:", err);
-    return ["", "", "", "", ""];
-  }
-}
-
-async function solveWithAlgebrite(matrixStr, mnaMatrix, resIndex, resIndex2) {
-  try {
-    Algebrite.eval("clearall");
-
-    if (mnaMatrix.length == 1) {
-      Algebrite.eval(`mna_vo_vi = 1/(${mnaMatrix[0]})`); //FIXME - is this correct? When is it hit, with Iin?
-    } else {
-      Algebrite.eval(`mna = [${matrixStr}]`);
-      Algebrite.eval("inv_mna = inv(mna)");
-      if (resIndex2.length == 0) {
-        Algebrite.eval(`mna_vo_vi = inv_mna[${resIndex[0]}][${resIndex[1]}]`);
-      } else {
-        Algebrite.eval(`mna_vo_vi = inv_mna[${resIndex[0]}][${resIndex[1]}] - inv_mna[${resIndex2[0]}][${resIndex2[1]}]`);
-      }
-    }
-
-    var strOut = Algebrite.eval("mna_vo_vi").toString(); //4ms
-
-    const [textResult, mathml] = simplify_algebra(strOut);
-
-    Algebrite.eval("complex_response = subst(s*i,s,mna_vo_vi)");
-    Algebrite.eval("abs_complex_response = abs(complex_response)");
-
-    const complex_response = Algebrite.eval("abs_complex_response").toString();
-
-    return [textResult, mathml, complex_response];
-  } catch (err) {
-    console.log("Building MNA matrix failed with this error:", err);
-    return ["", "", ""];
+    return ["", ""];
   }
 }
 
 // all these equations are based on
 // https://lpsa.swarthmore.edu/Systems/Electrical/mna/MNAAll.html
-export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedComponents, componentValuesSolved, pyodide, solver) {
+export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedComponents, componentValuesSolved, pyodide) {
   var i, vinNode, iinNode;
 
   //Are we plotting current or voltage?
@@ -174,10 +133,10 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
       if (el.ports[3] != null && el.ports[0] != null) mnaMatrix[el.ports[3]][el.ports[0]] += `+${name}`;
       if (el.ports[3] != null && el.ports[1] != null) mnaMatrix[el.ports[3]][el.ports[1]] += `-${name}`;
     } else if (el.type === "iprobe") {
-      mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[0]] = "1";
-      mnaMatrix[el.ports[0]][numNodes + extraRow + numActives + iprbCounter] = "1";
-      mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[1]] = "-1";
-      mnaMatrix[el.ports[1]][numNodes + extraRow + numActives + iprbCounter] = "-1";
+      if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[0]] = "1";
+      if (el.ports[0] != null) mnaMatrix[el.ports[0]][numNodes + extraRow + numActives + iprbCounter] = "1";
+      if (el.ports[1] != null) mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[1]] = "-1";
+      if (el.ports[1] != null) mnaMatrix[el.ports[1]][numNodes + extraRow + numActives + iprbCounter] = "-1";
       iprbCounter++;
     }
   }
@@ -204,36 +163,109 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
       else resIndex2.push(voutNode2 + 1, iinNode + 1);
     }
   }
-  var numericResult, textResult, mathml, complex_response, numericText;
+  var textResult, mathml;
 
-  if (solver === "algebrite") {
-    [textResult, mathml, complex_response] = await solveWithAlgebrite(nerdStr, mnaMatrix, resIndex, resIndex2);
-  } else {
-    [textResult, mathml, complex_response, numericResult, numericText] = await solveWithSymPy(nerdStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide);
-  }
+  [textResult, mathml] = await solveWithSymPy(nerdStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide);
 
-  return [textResult, mathml, complex_response, numericResult, numericText];
+  return [textResult, mathml];
 }
 
 export async function calcBilinear(solver) {
-  if (solver) {
-    const sympyString = `
+  const sympyString = `
 T, Z = symbols("T Z")
 bilinear = result_simplified.subs(s,(2/T)*(Z-1)/(Z+1))
 bilinear_simp = simplify(bilinear)
 str(bilinear_simp), mathml(bilinear_simp, printer='presentation')
 `;
-    const [res, mathml] = await solver.runPythonAsync(sympyString);
-    // console.log("bilinear transform", res, mathml);
+  const [res, mathml] = await solver.runPythonAsync(sympyString);
+  // console.log("bilinear transform", res, mathml);
 
-    return [res, removeFenced(mathml)];
-  } else {
-    Algebrite.eval("bilinear = subst((2/T)*(Z-1)/(Z+1),s,mna_vo_vi)");
-    try {
-      return simplify_algebra(Algebrite.eval("bilinear").toString());
-    } catch (err) {
-      console.log(err);
-      return ["", "<mtext>Having trouble calculating bilinear transform</mtext>"];
+  return [res, removeFenced(mathml)];
+}
+
+export async function new_calculate_tf(pyodide, fRange, numSteps, componentValuesSolved, setErrorSnackbar) {
+  if (!pyodide) return { freq_new: [], mag_new: [], phase_new: [], numericML: "", numericText: "" };
+
+  // Generate frequency array (logarithmic steps)
+  var fstepdB_20 = Math.log10(fRange.fmax / fRange.fmin) / numSteps;
+  var fstep = 10 ** fstepdB_20;
+  const freq = [];
+  for (var f = fRange.fmin; f < fRange.fmax; f = f * fstep) {
+    freq.push(f);
+  }
+
+  try {
+    // Use sympy to calculate magnitudes and phases for all frequencies and numeric representation
+    // Optimized: Use lambdify to create a fast numeric function instead of slow evalf() calls
+    const sympyString = `
+
+result_numeric = result_simplified.subs(${JSON.stringify(componentValuesSolved).replaceAll('"', "")})
+result_numeric_simplified = simplify(result_numeric)
+
+# Calculate numeric MathML and text representation
+numeric_mathml = mathml(result_numeric_simplified, printer='presentation')
+numeric_text = str(result_numeric_simplified)
+
+# Create a lambdified numeric function for fast evaluation
+# This converts the symbolic expression to a numeric function that can be evaluated much faster
+numeric_func = lambdify(s, result_numeric_simplified)
+
+# Evaluate for all frequencies using the fast numeric function
+freq_array = ${JSON.stringify(freq)}
+mag_array = []
+phase_array = []
+
+for f in freq_array:
+    s_val = 2 * pi * f * 1j  # Use Python's 1j for complex number
+    result_complex = numeric_func(s_val)
+    # Convert to plain Python complex to avoid SymPy/Pyodide overhead
+    result_complex = complex(result_complex)
+    # Use manual magnitude calculation which is faster than abs() on Pyodide proxies
+    mag_val = (result_complex.real**2 + result_complex.imag**2)**0.5
+    # Use Python's built-in cmath.phase() for fast numeric calculation
+    phase_val = cmath.phase(result_complex)
+    mag_array.append(mag_val)
+    phase_array.append(phase_val)
+
+# Convert to plain Python floats to avoid Pyodide proxy issues
+# Ensure all values are plain floats (not sympy objects)
+mag_list = [float(x) for x in mag_array]
+phase_list = [float(x) for x in phase_array]
+
+(numeric_mathml, numeric_text, mag_list, phase_list)
+`;
+    const result = await pyodide.runPythonAsync(sympyString);
+    // Pyodide returns a tuple as a proxy object - access elements by index
+    if (!result || result.length !== 4) {
+      throw new Error(`Unexpected result from Python: length=${result?.length}`);
     }
+    const numericML = result[0];
+    const numericText = result[1];
+    const mag = result[2];
+    const phase = result[3];
+
+    // Convert Pyodide arrays to JavaScript arrays - extract values immediately to avoid proxy exhaustion
+    const magArray = [];
+    const phaseArray = [];
+    for (let i = 0; i < mag.length; i++) {
+      magArray.push(Number(mag[i]));
+    }
+    for (let i = 0; i < phase.length; i++) {
+      phaseArray.push(Number(phase[i]));
+    }
+    return {
+      freq_new: freq,
+      mag_new: magArray,
+      phase_new: phaseArray,
+      numericML: removeFenced(String(numericML)),
+      numericText: String(numericText).replaceAll("**", "^"),
+    };
+  } catch (err) {
+    setErrorSnackbar((x) => {
+      if (!x) return true;
+      else return x;
+    });
+    console.log("Error calculating transfer function:", err);
+    return { freq_new: [], mag_new: [], phase_new: [], numericML: "", numericText: "" };
   }
 }

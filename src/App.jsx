@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./App.css";
 import "visiojs/dist/visiojs.css"; // Import VisioJS styles
 // import { startupSchematic } from "./startupSchematic.js";
@@ -8,8 +8,8 @@ import { VisioJSSchematic } from "./VisioJSSchematic.jsx";
 import { ComponentAdjuster } from "./ComponentAdjuster.jsx";
 import { FreqAdjusters } from "./FreqAdjusters.jsx";
 // import Grid from "@mui/material/Grid";
-import { units } from "./common.js";
-import { calcBilinear } from "./new_solveMNA.js";
+import { units, formatMathML } from "./common.js";
+import { calcBilinear, new_calculate_tf } from "./new_solveMNA.js";
 
 import { NavBar } from "./NavBar.jsx";
 import { ChoseTF } from "./ChoseTF.jsx";
@@ -93,58 +93,6 @@ function stateFromURL() {
 }
 const [modifiedComponents, modifiedSettings, modifiedSchematic] = stateFromURL();
 
-function new_calculate_tf(textResult, fRange, numSteps, components, setErrorSnackbar) {
-  // console.log("new_calculate_tf", { textResult, fRange, numSteps, components });
-  if (textResult == "") return { freq_new: [], mag_new: [] };
-  var complex_freq = textResult;
-  var rep;
-  for (const key in components) {
-    rep = RegExp(key, "g");
-    complex_freq = complex_freq.replace(rep, components[key]);
-  }
-
-  //Now only remaining variable is S, substitute that and solve. Also swap power ^ for **
-  const re = /s/gi;
-  const reDollar = /\$/gi;
-  const re2 = /\^/gi;
-  var res = complex_freq.replace(re2, "**"); //swap ^ for **
-  // const re3 = /abs/gi; //sometimes abs(C0) is left in the equation
-  // res = res.replace(re3, "");
-  //now swap sqrt for '$'
-  const re3 = /sqrt/gi; //sometimes abs(C0) is left in the equation
-  res = res.replace(re3, "$"); //swap sqrt for $
-  const re4 = /abs/gi;
-  res = res.replace(re4, ""); //swap Abs(...) for (...). I saw one case where Sympy left it in but it's ok to remove it like this
-  const re5 = /I/gi;
-  res = res.replace(re5, "1"); //swap I for 1. Sometimes sympy leaves in the I if the result is fully imaginary. This is dangerous and instead the numeric solving should go inside sympy
-
-  var fstepdB_20 = Math.log10(fRange.fmax / fRange.fmin) / numSteps;
-  var fstep = 10 ** fstepdB_20;
-  var absNew, evalNew;
-  const freq = [];
-  const mag = [];
-  try {
-    for (var f = fRange.fmin; f < fRange.fmax; f = f * fstep) {
-      freq.push(f);
-      // const mathString = res.replace(re, 2 * Math.PI * f).replace(/\*\*/g, "^");
-      // evalNew = evaluate(mathString);
-      const mathString = res.replace(re, 2 * Math.PI * f).replace(reDollar, "Math.sqrt");
-      evalNew = eval(mathString);
-
-      absNew = Math.abs(evalNew);
-      mag.push(20 * Math.log10(absNew));
-    }
-  } catch (err) {
-    setErrorSnackbar((x) => {
-      if (!x) return true;
-      else return x;
-    });
-    console.log("oh no", err);
-  }
-
-  return { freq_new: freq, mag_new: mag };
-}
-
 function compToURL(key, value) {
   return `${key}_${value.type}_${value.value}_${value.unit}`;
 }
@@ -153,7 +101,9 @@ function App() {
   const [nodes, setNodes] = useState([]);
 
   const [fullyConnectedComponents, setFullyConnectedComponents] = useState({});
-  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", bilinearRaw: "", bilinearMathML: "" });
+  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", solver: null, probeName: "", drivers: [] });
+  const [numericResults, setNumericResults] = useState({ numericML: "", numericText: "" });
+  const [bilinearResults, setBilinearResults] = useState({ bilinearML: "", bilinearText: "" });
   const [componentValues, setComponentValues] = useState(modifiedComponents);
   const [settings, setSettings] = useState(modifiedSettings);
   const [schemHistory, setSchemHistory] = useState({ pointer: 0, state: [modifiedSchematic] });
@@ -246,13 +196,53 @@ function App() {
 
   const [freq_new, setFreqNew] = useState(null);
   const [mag_new, setMagNew] = useState(null);
+  const [phase_new, setPhaseNew] = useState(null);
+  const debounceTimerRef = useRef(null);
+
   useEffect(() => {
-    const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
-    const componentValuesSolved2 = {};
-    for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
-    const { freq_new, mag_new } = new_calculate_tf(results.complexResponse, fRange, settings.resolution, componentValuesSolved2, setErrorSnackbar);
-    setFreqNew(freq_new);
-    setMagNew(mag_new);
+    // Clear any existing timeout
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set a new timeout to debounce the calculation
+    debounceTimerRef.current = setTimeout(async () => {
+      const calculateTF = async () => {
+        if (!results.solver || results.text === "") {
+          setFreqNew([]);
+          setMagNew([]);
+          setPhaseNew([]);
+          setNumericResults({ numericML: "", numericText: "" });
+          setBilinearResults({ bilinearML: "", bilinearText: "" });
+          return;
+        }
+        const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
+        const componentValuesSolved2 = {};
+        for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
+        const { freq_new, mag_new, phase_new, numericML, numericText } = await new_calculate_tf(
+          results.solver,
+          fRange,
+          settings.resolution,
+          componentValuesSolved2,
+          setErrorSnackbar,
+        );
+        setFreqNew(freq_new);
+        setMagNew(mag_new);
+        setPhaseNew(phase_new);
+        if (numericML && numericText && results.probeName && results.drivers) {
+          const formattedNumericML = formatMathML(numericML, results.probeName, results.drivers);
+          setNumericResults({ numericML: formattedNumericML, numericText: numericText });
+        }
+      };
+      calculateTF();
+    }, 1000); // Wait 1000ms after the user stops typing
+
+    // Cleanup function to clear timeout on unmount or when dependencies change
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, [results, settings, componentValues]);
 
   function stateToURL() {
@@ -284,9 +274,10 @@ function App() {
   async function handleRequestBilin() {
     // console.log("handleRequestBilin", calcBilinear());
     const [raw, bilin] = await calcBilinear(results.solver);
-    // setBilinearMathML(`<math>${bilin}</math>`);
-    // setBilinearRaw(raw);
-    setResults({ ...results, bilinearRaw: raw, bilinearMathML: `<math>${bilin}</math>` });
+    setBilinearResults({
+      bilinearML: `<math>${bilin}</math>`,
+      bilinearText: raw,
+    });
   }
   // console.log(results);
 
@@ -334,14 +325,13 @@ function App() {
             {results.text != "" && (
               <>
                 <DisplayMathML title="Laplace Transform" textResult={results.text} mathML={results.mathML} caclDone={results.text != ""} />
-                {results.numericText != null && (
-                  <DisplayMathML title="Laplace Transform (numeric)" textResult={results.numericText} mathML={results.numericML} caclDone={results.text != ""} />
-                )}
                 <div className="col-12">
-                  <MyChart freq_new={freq_new} mag_new={mag_new} />
+                  <MyChart freq_new={freq_new} mag_new={mag_new} phase_new={phase_new} hasResults={results.text !== ""} />
                 </div>
                 <FreqAdjusters settings={settings} setSettings={setSettings} />
-                {results.bilinearMathML == "" ? (
+                <DisplayMathML title="Laplace Transform (numeric)" textResult={numericResults.numericText} mathML={numericResults.numericML} caclDone={results.text != ""} />
+
+                {bilinearResults.bilinearML == "" ? (
                   <Grid container spacing={1}>
                     <Button
                       variant="contained"
@@ -355,7 +345,7 @@ function App() {
                     </Button>
                   </Grid>
                 ) : (
-                  <DisplayMathML title="Bilinear Transform" textResult={results.bilinearRaw} mathML={results.bilinearMathML} caclDone={results.text != ""} />
+                  <DisplayMathML title="Bilinear Transform" textResult={bilinearResults.bilinearText} mathML={bilinearResults.bilinearML} caclDone={results.text != ""} />
                 )}
               </>
             )}
