@@ -133,10 +133,10 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
       if (el.ports[3] != null && el.ports[0] != null) mnaMatrix[el.ports[3]][el.ports[0]] += `+${name}`;
       if (el.ports[3] != null && el.ports[1] != null) mnaMatrix[el.ports[3]][el.ports[1]] += `-${name}`;
     } else if (el.type === "iprobe") {
-      mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[0]] = "1";
-      mnaMatrix[el.ports[0]][numNodes + extraRow + numActives + iprbCounter] = "1";
-      mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[1]] = "-1";
-      mnaMatrix[el.ports[1]][numNodes + extraRow + numActives + iprbCounter] = "-1";
+      if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[0]] = "1";
+      if (el.ports[0] != null) mnaMatrix[el.ports[0]][numNodes + extraRow + numActives + iprbCounter] = "1";
+      if (el.ports[1] != null) mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[1]] = "-1";
+      if (el.ports[1] != null) mnaMatrix[el.ports[1]][numNodes + extraRow + numActives + iprbCounter] = "-1";
       iprbCounter++;
     }
   }

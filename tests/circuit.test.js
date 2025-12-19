@@ -76,6 +76,39 @@ test("voltage in current probe - 2", async () => {
   // expect(complex_response).toEqual("1.0e-24*s**2/sqrt(1.0e-40*s**4 - 1.0e-20*s**2 + 1)");
   expect(numericText).toEqual("1.0e-20*s^2/(1.0e-16*s^2 + 1.0e-6*s + 10000)");
 });
+test("voltage in current probe - 3", async () => {
+  const components = {
+    R0: {
+      ports: [0, 1],
+      type: "resistor",
+    },
+    vin: {
+      ports: [0],
+      type: "vin",
+    },
+    L0: {
+      ports: [0, 2],
+      type: "inductor",
+    },
+    Y0: {
+      ports: [2, null],
+      type: "iprobe",
+    },
+    C0: {
+      ports: [2, null],
+      type: "capacitor",
+    },
+  };
+  const values = {
+    L0: 0.000001,
+    R0: 10000,
+    C0: 1e-14,
+  };
+  const [textResult, _mathml] = await build_and_solve_mna(3, ["Y0"], components, values, pyodide);
+  const { numericText } = await new_calculate_tf(pyodide, { fmin: 1, fmax: 1000 }, 10, values, () => {});
+  expect(textResult).toEqual("1/(L0*s)");
+  expect(numericText).toEqual("1000000.0/s");
+});
 
 test("current in current probe - 2", async () => {
   const components = {
