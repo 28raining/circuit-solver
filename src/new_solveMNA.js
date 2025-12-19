@@ -196,6 +196,7 @@ export async function new_calculate_tf(pyodide, fRange, numSteps, componentValue
 
   try {
     // Use sympy to calculate magnitudes and phases for all frequencies and numeric representation
+    // Optimized: Use lambdify to create a fast numeric function instead of slow evalf() calls
     const sympyString = `
 
 result_numeric = result_simplified.subs(${JSON.stringify(componentValuesSolved).replaceAll('"', "")})
@@ -205,33 +206,55 @@ result_numeric_simplified = simplify(result_numeric)
 numeric_mathml = mathml(result_numeric_simplified, printer='presentation')
 numeric_text = str(result_numeric_simplified)
 
+# Create a lambdified numeric function for fast evaluation
+# This converts the symbolic expression to a numeric function that can be evaluated much faster
+numeric_func = lambdify(s, result_numeric_simplified)
+
+# Evaluate for all frequencies using the fast numeric function
 freq_array = ${JSON.stringify(freq)}
 mag_array = []
 phase_array = []
 
 for f in freq_array:
-    s_val = 2 * pi * f * I
-    result_numeric_complex = result_numeric_simplified.subs(s, s_val)
-    mag = Abs(result_numeric_complex)
-    # Return linear magnitude (conversion to dB will be done in JavaScript)
-    mag_eval = float(mag.evalf())
-    mag_array.append(mag_eval)
-    
-    # Calculate phase in radians using sympy.arg (conversion to degrees will be done in JavaScript)
-    phase_rad = arg(result_numeric_complex)
-    phase_rad_eval = float(phase_rad.evalf())
-    phase_array.append(phase_rad_eval)
+    s_val = 2 * pi * f * 1j  # Use Python's 1j for complex number
+    result_complex = numeric_func(s_val)
+    # Use Python's built-in abs() and cmath.phase() for fast numeric calculation
+    mag_array.append(abs(result_complex))
+    phase_array.append(cmath.phase(result_complex))
 
-(numeric_mathml, numeric_text, mag_array, phase_array)
+# Convert to plain Python floats to avoid Pyodide proxy issues
+# Ensure all values are plain floats (not sympy objects)
+mag_list = [float(x) for x in mag_array]
+phase_list = [float(x) for x in phase_array]
+
+(numeric_mathml, numeric_text, mag_list, phase_list)
 `;
-    const [numericML, numericText, mag, phase] = await pyodide.runPythonAsync(sympyString);
+    const result = await pyodide.runPythonAsync(sympyString);
+    // Pyodide returns a tuple as a proxy object - access elements by index
+    if (!result || result.length !== 4) {
+      throw new Error(`Unexpected result from Python: length=${result?.length}`);
+    }
+    const numericML = result[0];
+    const numericText = result[1];
+    const mag = result[2];
+    const phase = result[3];
+    
+    // Convert Pyodide arrays to JavaScript arrays - extract values immediately to avoid proxy exhaustion
+    const magArray = [];
+    const phaseArray = [];
+    for (let i = 0; i < mag.length; i++) {
+      magArray.push(Number(mag[i]));
+    }
+    for (let i = 0; i < phase.length; i++) {
+      phaseArray.push(Number(phase[i]));
+    }
     
     return { 
       freq_new: freq, 
-      mag_new: Array.from(mag),
-      phase_new: Array.from(phase),
-      numericML: removeFenced(numericML),
-      numericText: numericText.replaceAll("**", "^")
+      mag_new: magArray,
+      phase_new: phaseArray,
+      numericML: removeFenced(String(numericML)),
+      numericText: String(numericText).replaceAll("**", "^")
     };
   } catch (err) {
     setErrorSnackbar((x) => {
