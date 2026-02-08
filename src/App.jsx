@@ -159,7 +159,7 @@ function App() {
         message="This Snackbar will be dismissed in 5 seconds."
       >
         <SnackbarContent
-          message="An error has occurred. Please try using Sympy. If the issue persists please leave a comment"
+          message="An error has occurred. If the issue persists please leave a comment sharing your URL (save button at the top of the page)"
           sx={{
             backgroundColor: "#ec1186ff",
             color: "#fff",

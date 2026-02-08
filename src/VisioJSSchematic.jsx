@@ -87,12 +87,11 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
         return fullyConnectedComponents;
       });
       // setFullyConnectedComponents(fullyConnectedComponents)
-      setNodes((old) => {
-        if (JSON.stringify(old) == JSON.stringify(nodeMap)) return old;
-        else {
-          setResults({ ...emptyResults });
-          return nodeMap;
-        }
+      //CHANGE - 8th Feb 2026 - now if schematic changes at all, reset the results to empty. Otherwise hit bug where new components are added and Sympy can't handle it
+      setNodes((/*old*/) => {
+        // if (JSON.stringify(old) == JSON.stringify(nodeMap)) return old;
+        setResults({ ...emptyResults });
+        return nodeMap;
       });
 
       setComponents(components);
