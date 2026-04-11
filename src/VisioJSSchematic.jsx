@@ -11,7 +11,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Grid from "@mui/material/Grid";
 
 import { addShapes, emptyResults } from "./common.js";
-import { ensureCircuitIds } from "./circuitIds.js";
+import { assignSympySymbols, ensureCircuitIds } from "./circuitIds.js";
 
 const shapesWithLabels = {
   resistor: "R",
@@ -31,6 +31,9 @@ const componentDefaults = {
   vcvs: { value: 100, unit: "V/V" },
   vcis: { value: 1e-3, unit: "A/V" },
 };
+
+/** Sources are not in componentValues; skip them when grouping by SymPy name. */
+const NO_VALUE_SYNC_TYPES = new Set(["vin", "iin", "gnd"]);
 
 const activeComponents = ["opamp", "resistor", "capacitor", "inductor", "vcvs", "vcis"];
 const probes = ["vprobe", "iprobe"];
@@ -99,12 +102,59 @@ export function VisioJSSchematic({
 
       setComponentValues((oldValues) => {
         const newValues = { ...oldValues };
+        // Add defaults for new parts; drop entries for deleted shapes.
         for (const [key, value] of Object.entries(components)) {
           if (!(key in newValues) && value.type in componentDefaults) newValues[key] = { type: value.type, ...componentDefaults[value.type] };
         }
         for (const key in newValues) {
           if (!(key in components)) delete newValues[key];
         }
+
+        // If two parts share the same label + type (same SymPy symbol), keep one value/unit for both.
+        // Use every schematic part in `components`, not only `fullyConnectedComponents` (vin subgraph).
+        const symbolScratch = {};
+        for (const [id, c] of Object.entries(components)) {
+          if (NO_VALUE_SYNC_TYPES.has(c.type)) continue;
+          symbolScratch[id] = { type: c.type, displayName: c.displayName };
+        }
+        assignSympySymbols(symbolScratch);
+
+        const groupKey = (sym, type) => `${sym}\0${type}`;
+        const idsBySymType = new Map();
+        for (const [id, el] of Object.entries(symbolScratch)) {
+          if (!el.sympySymbol) continue;
+          const k = groupKey(el.sympySymbol, el.type);
+          if (!idsBySymType.has(k)) idsBySymType.set(k, []);
+          idsBySymType.get(k).push(id);
+        }
+
+        // Canonical = first shape on the canvas (array order) in each group, so an older part wins over a rename.
+        const canonicalIdByGroup = new Map();
+        for (const s of newState.shapes) {
+          if (s == null || !("connectors" in s)) continue;
+          const cid = s.circuitId;
+          if (!cid || !symbolScratch[cid]?.sympySymbol) continue;
+          const el = symbolScratch[cid];
+          const k = groupKey(el.sympySymbol, el.type);
+          if (canonicalIdByGroup.has(k)) continue;
+          canonicalIdByGroup.set(k, cid);
+        }
+
+        for (const [k, ids] of idsBySymType) {
+          if (ids.length < 2) continue;
+          let canon = canonicalIdByGroup.get(k);
+          if (canon == null || !(canon in newValues)) {
+            canon = [...ids].sort().find((cid) => cid in newValues);
+          }
+          if (!canon) continue;
+          const ref = newValues[canon];
+          for (const id of ids) {
+            if (id !== canon && id in newValues && newValues[id].type === ref.type) {
+              newValues[id] = { ...newValues[id], value: ref.value, unit: ref.unit };
+            }
+          }
+        }
+
         if (JSON.stringify(oldValues) == JSON.stringify(newValues)) return oldValues;
         return newValues;
       });

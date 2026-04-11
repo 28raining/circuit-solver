@@ -9,6 +9,7 @@ import Card from "@mui/material/Card";
 import FormControl from "@mui/material/FormControl";
 
 import { units } from "./common";
+import { enforceComponentNamePrefix } from "./componentNaming.js";
 
 export function ComponentAdjuster({ componentValues, setComponentValues, fullyConnectedComponents, schematicComponents, onDisplayNameChange }) {
   function handleValueChange(id, value) {
@@ -43,7 +44,8 @@ export function ComponentAdjuster({ componentValues, setComponentValues, fullyCo
   }
 
   function handleDisplayNameInput(id, text) {
-    onDisplayNameChange(id, text);
+    const type = componentValues[id]?.type;
+    onDisplayNameChange(id, enforceComponentNamePrefix(type, text));
   }
 
   return (
