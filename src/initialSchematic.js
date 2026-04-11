@@ -16,6 +16,7 @@ export const initialSchematic = {
     },
     {
       image: "gnd.svg",
+      circuitId: "gnd",
       connectors: [[0, 0]],
       x: 192,
       y: 128,
@@ -23,6 +24,7 @@ export const initialSchematic = {
     },
     {
       image: "vin.svg",
+      circuitId: "vin",
       connectors: [[0, 0]],
       x: -192,
       y: 0,
@@ -30,6 +32,7 @@ export const initialSchematic = {
     },
     {
       image: "inductor.svg",
+      circuitId: "11111111-1111-1111-1111-111111111101",
       connectors: [
         [-64, 0],
         [64, 0],
@@ -46,6 +49,7 @@ export const initialSchematic = {
     },
     {
       image: "resistor.svg",
+      circuitId: "11111111-1111-1111-1111-111111111102",
       connectors: [
         [-32, 0],
         [64, 0],
@@ -62,6 +66,7 @@ export const initialSchematic = {
     },
     {
       image: "capacitor.svg",
+      circuitId: "11111111-1111-1111-1111-111111111103",
       connectors: [
         [0, -32],
         [0, 64],
@@ -78,6 +83,7 @@ export const initialSchematic = {
     },
     {
       image: "vprobe.svg",
+      circuitId: "11111111-1111-1111-1111-111111111104",
       connectors: [[0, 0]],
       x: 0,
       y: -160,

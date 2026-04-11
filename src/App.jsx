@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import "./App.css";
 import "visiojs/dist/visiojs.css"; // Import VisioJS styles
 // import { startupSchematic } from "./startupSchematic.js";
@@ -8,7 +8,7 @@ import { VisioJSSchematic } from "./VisioJSSchematic.jsx";
 import { ComponentAdjuster } from "./ComponentAdjuster.jsx";
 import { FreqAdjusters } from "./FreqAdjusters.jsx";
 // import Grid from "@mui/material/Grid";
-import { units, formatMathML } from "./common.js";
+import { units, formatMathML, addShapes } from "./common.js";
 import { calcBilinear, new_calculate_tf } from "./new_solveMNA.js";
 
 import { NavBar } from "./NavBar.jsx";
@@ -26,17 +26,17 @@ import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 
 const initialComponents = {
-  L0: {
+  "11111111-1111-1111-1111-111111111101": {
     type: "inductor",
     value: 1,
     unit: "uH",
   },
-  R0: {
+  "11111111-1111-1111-1111-111111111102": {
     type: "resistor",
     value: 10,
     unit: "KΩ",
   },
-  C0: {
+  "11111111-1111-1111-1111-111111111103": {
     type: "capacitor",
     value: 10,
     unit: "fF",
@@ -51,6 +51,7 @@ const initialSettings = {
   resolution: 100,
 };
 import { initialSchematic } from "./initialSchematic.js";
+import { ensureCircuitIds } from "./circuitIds.js";
 var urlContainsState = false; // Flag to check if URL contains state
 
 function stateFromURL() {
@@ -61,7 +62,7 @@ function stateFromURL() {
 
   var modifiedComponents = initialComponents;
   var modifiedSettings = initialSettings;
-  var modifiedSchematic = initialSchematic; // Default to initial schematic if no URL param is
+  var modifiedSchematic = ensureCircuitIds(structuredClone(initialSchematic)); // Default to initial schematic if no URL param is
 
   if (componentsParam) {
     urlContainsState = true; // Set the flag if components are present in the URL
@@ -87,7 +88,7 @@ function stateFromURL() {
     // Decode the Base64 string back into a Uint8Array
     const compressedBinary = Uint8Array.from(atob(decodeURIComponent(schematicParam)), (char) => char.charCodeAt(0));
     const decompressed = pako.inflate(compressedBinary, { to: "string" }); // Decompress the data using pako
-    modifiedSchematic = JSON.parse(decompressed); // Parse the decompressed JSON string into an object
+    modifiedSchematic = ensureCircuitIds(JSON.parse(decompressed)); // Parse the decompressed JSON string into an object
   }
   return [modifiedComponents, modifiedSettings, modifiedSchematic];
 }
@@ -101,12 +102,16 @@ function App() {
   const [nodes, setNodes] = useState([]);
 
   const [fullyConnectedComponents, setFullyConnectedComponents] = useState({});
-  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", solver: null, probeName: "", drivers: [] });
+  /** All placed shapes with connectors (incl. not yet wired to vin); used for display names on new parts. */
+  const [schematicComponents, setSchematicComponents] = useState({});
+  const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", solver: null, probeName: "", probeDisplayLabel: "", drivers: [] });
   const [numericResults, setNumericResults] = useState({ numericML: "", numericText: "" });
   const [bilinearResults, setBilinearResults] = useState({ bilinearML: "", bilinearText: "" });
   const [componentValues, setComponentValues] = useState(modifiedComponents);
   const [settings, setSettings] = useState(modifiedSettings);
   const [schemHistory, setSchemHistory] = useState({ pointer: 0, state: [modifiedSchematic] });
+  /** Bumped when labels are edited in the adjuster so visiojs always redraws the canvas. */
+  const [schematicSyncNonce, setSchematicSyncNonce] = useState(0);
   const [urlSnackbar, setUrlSnackbar] = useState(false);
   const [errorSnackbar, setErrorSnackbar] = useState(false);
   const [unsolveSnackbar, setUnsolveSnackbar] = useState(false);
@@ -192,7 +197,11 @@ function App() {
   }
 
   const componentValuesSolved = {};
-  for (const key in componentValues) componentValuesSolved[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
+  for (const id in componentValues) {
+    const sym = fullyConnectedComponents[id]?.sympySymbol;
+    if (!sym) continue;
+    componentValuesSolved[sym] = componentValues[id].value * units[componentValues[id].type][componentValues[id].unit];
+  }
 
   const [freq_new, setFreqNew] = useState(null);
   const [mag_new, setMagNew] = useState(null);
@@ -218,7 +227,11 @@ function App() {
         }
         const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
         const componentValuesSolved2 = {};
-        for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
+        for (const id in componentValues) {
+          const sym = fullyConnectedComponents[id]?.sympySymbol;
+          if (!sym) continue;
+          componentValuesSolved2[sym] = componentValues[id].value * units[componentValues[id].type][componentValues[id].unit];
+        }
         const { freq_new, mag_new, phase_new, numericML, numericText } = await new_calculate_tf(
           results.solver,
           fRange,
@@ -230,7 +243,7 @@ function App() {
         setMagNew(mag_new);
         setPhaseNew(phase_new);
         if (numericML && numericText && results.probeName && results.drivers) {
-          const formattedNumericML = formatMathML(numericML, results.probeName, results.drivers);
+          const formattedNumericML = formatMathML(numericML, results.probeDisplayLabel || results.probeName, results.drivers);
           setNumericResults({ numericML: formattedNumericML, numericText: numericText });
         }
       };
@@ -243,7 +256,27 @@ function App() {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [results, settings, componentValues]);
+  }, [results, settings, componentValues, fullyConnectedComponents]);
+
+  const handleDisplayNameChange = useCallback((circuitId, text) => {
+    setSchemHistory((h) => {
+      const i = h.pointer;
+      const newState = JSON.parse(JSON.stringify(h.state[i]));
+      const sh = newState.shapes.find((s) => s && s.circuitId === circuitId);
+      if (sh) {
+        if (!sh.label) {
+          const shapeType = sh.image?.split(".")[0];
+          const template = shapeType ? addShapes[shapeType] : null;
+          if (template?.label) sh.label = JSON.parse(JSON.stringify(template.label));
+        }
+        if (sh.label) sh.label.text = text;
+      }
+      const state = [...h.state];
+      state[i] = newState;
+      return { ...h, state };
+    });
+    setSchematicSyncNonce((n) => n + 1);
+  }, []);
 
   function stateToURL() {
     const url = new URL(window.location.href);
@@ -308,10 +341,18 @@ function App() {
                 setHistory={setSchemHistory}
                 setComponentValues={setComponentValues}
                 setFullyConnectedComponents={setFullyConnectedComponents}
+                setSchematicComponents={setSchematicComponents}
+                schematicSyncNonce={schematicSyncNonce}
               />
             </div>
             <div className="col-12">
-              <ComponentAdjuster componentValues={componentValues} setComponentValues={setComponentValues} />
+              <ComponentAdjuster
+                componentValues={componentValues}
+                setComponentValues={setComponentValues}
+                fullyConnectedComponents={fullyConnectedComponents}
+                schematicComponents={schematicComponents}
+                onDisplayNameChange={handleDisplayNameChange}
+              />
             </div>
           </div>
           <div className="row shadow-sm rounded bg-lightgreen my-2 py-3" id="schematic">
@@ -319,6 +360,7 @@ function App() {
               setResults={setResults}
               nodes={nodes}
               fullyConnectedComponents={fullyConnectedComponents}
+              schematicComponents={schematicComponents}
               componentValuesSolved={componentValuesSolved}
               setUnsolveSnackbar={setUnsolveSnackbar}
             />

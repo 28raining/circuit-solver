@@ -6,9 +6,17 @@ function removeFenced(mathml) {
   // return mathml;
   return mathml.replaceAll(/<mfenced>/g, "<mrow><mo>(</mo>").replaceAll(/<\/mfenced>/g, "<mo>)</mo></mrow>"); // replace <mfenced> with <mo>{</mo>
 }
+function collectSympySymbols(elementMap) {
+  const set = new Set();
+  for (const el of Object.values(elementMap)) {
+    if (el.sympySymbol) set.add(el.sympySymbol);
+  }
+  return [...set];
+}
+
 async function solveWithSymPy(matrixStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide) {
-  // const pyodide = await initPyodideAndSympy();
-  const symbols = `${[...Object.keys(elementMap), "s"].join(", ")} = symbols("${[...Object.keys(elementMap), "s"].join(" ")}", positive=True, real=True)`;
+  const symNames = collectSympySymbols(elementMap);
+  const symbols = `${[...symNames, "s"].join(", ")} = symbols("${[...symNames, "s"].join(" ")}", positive=True, real=True)`;
   const matrixStrPow = matrixStr.replaceAll("^", "**");
 
   const sympyString = `
@@ -74,12 +82,13 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
 
   // Step 1 - loop thru elementMap and start adding things to the MNA
   var laplaceElement;
-  for (const name in elementMap) {
-    const el = elementMap[name];
+  for (const circuitId in elementMap) {
+    const el = elementMap[circuitId];
+    const sym = el.sympySymbol ?? circuitId;
     if (["inductor", "capacitor", "resistor"].includes(el.type)) {
-      if (el.type == "resistor") laplaceElement = name;
-      else if (el.type == "inductor") laplaceElement = `(s*${name})`;
-      else laplaceElement = `1/(s*${name})`;
+      if (el.type == "resistor") laplaceElement = sym;
+      else if (el.type == "inductor") laplaceElement = `(s*${sym})`;
+      else laplaceElement = `1/(s*${sym})`;
 
       //2.1 in the diagonal is the sum of all impedances connected to that node
       for (const p of el.ports) if (p !== null) mnaMatrix[p][p] += `+${laplaceElement}^(-1)`;
@@ -112,26 +121,27 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
   // current probes are implemented as 0V voltage sources, because the i thru voltage sources ends up in the resulting matric
   var opAmpCounter = 0;
   var iprbCounter = 0;
-  for (const name in elementMap) {
-    const el = elementMap[name];
+  for (const circuitId in elementMap) {
+    const el = elementMap[circuitId];
+    const sym = el.sympySymbol ?? circuitId;
     if (el.type === "opamp") {
       if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[0]] = "1";
       if (el.ports[1] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[1]] = "-1";
       if (el.ports[2] != null) mnaMatrix[el.ports[2]][numNodes + extraRow + opAmpCounter] = "1";
       opAmpCounter++;
     } else if (el.type === "vcvs") {
-      if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[0]] = `+${name}`;
-      if (el.ports[1] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[1]] = `-${name}`;
+      if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[0]] = `+${sym}`;
+      if (el.ports[1] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[1]] = `-${sym}`;
       if (el.ports[2] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[2]] += `+1`;
       if (el.ports[3] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[3]] += `-1`;
       if (el.ports[2] != null) mnaMatrix[el.ports[2]][numNodes + extraRow + opAmpCounter] = "1";
       if (el.ports[3] != null) mnaMatrix[el.ports[3]][numNodes + extraRow + opAmpCounter] = "-1";
       opAmpCounter++;
     } else if (el.type === "vcis") {
-      if (el.ports[2] != null && el.ports[0] != null) mnaMatrix[el.ports[2]][el.ports[0]] += `-${name}`;
-      if (el.ports[2] != null && el.ports[1] != null) mnaMatrix[el.ports[2]][el.ports[1]] += `+${name}`;
-      if (el.ports[3] != null && el.ports[0] != null) mnaMatrix[el.ports[3]][el.ports[0]] += `+${name}`;
-      if (el.ports[3] != null && el.ports[1] != null) mnaMatrix[el.ports[3]][el.ports[1]] += `-${name}`;
+      if (el.ports[2] != null && el.ports[0] != null) mnaMatrix[el.ports[2]][el.ports[0]] += `-${sym}`;
+      if (el.ports[2] != null && el.ports[1] != null) mnaMatrix[el.ports[2]][el.ports[1]] += `+${sym}`;
+      if (el.ports[3] != null && el.ports[0] != null) mnaMatrix[el.ports[3]][el.ports[0]] += `+${sym}`;
+      if (el.ports[3] != null && el.ports[1] != null) mnaMatrix[el.ports[3]][el.ports[1]] += `-${sym}`;
     } else if (el.type === "iprobe") {
       if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[0]] = "1";
       if (el.ports[0] != null) mnaMatrix[el.ports[0]][numNodes + extraRow + numActives + iprbCounter] = "1";

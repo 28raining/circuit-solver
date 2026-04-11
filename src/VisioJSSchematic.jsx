@@ -1,17 +1,17 @@
 // import { visiojs } from "/visiojs/package/dist/visiojs.js";
 import visiojs from "visiojs";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createNodeMap } from "./visiojs_to_matrix.js";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UndoIcon from "@mui/icons-material/Undo";
 import RedoIcon from "@mui/icons-material/Redo";
-import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
 import Grid from "@mui/material/Grid";
 
 import { addShapes, emptyResults } from "./common.js";
+import { ensureCircuitIds } from "./circuitIds.js";
 
 const shapesWithLabels = {
   resistor: "R",
@@ -35,26 +35,58 @@ const componentDefaults = {
 const activeComponents = ["opamp", "resistor", "capacitor", "inductor", "vcvs", "vcis"];
 const probes = ["vprobe", "iprobe"];
 
-//Add 0 to the end of the labels to make them unique
 const initialLabels = {};
 Object.keys(shapesWithLabels).forEach((key) => {
   initialLabels[key] = `${shapesWithLabels[key]}0`;
 });
 
-function calculateNextIndex(components, type, prefix) {
-  if (!components) return initialLabels[type];
-  if (Object.keys(components).length == 0) return initialLabels[type];
-  // console.log("calculateNextIndex", type, prefix, components);
-  const existingLabels = Object.keys(components)
-    .filter((k) => components[k].type == type)
-    .map((c) => Number(c.slice(1)));
-  // console.log("existingLabels", type, existingLabels, Math.max(...existingLabels)+1);
-  return `${prefix}${existingLabels.length == 0 ? 0 : Math.max(...existingLabels) + 1}`;
+/**
+ * visiojs `su()` only creates the label <text> when the shape group is new; for existing shapes
+ * it updates transform but never refreshes label text. Patch the SVG from schematic state.
+ */
+function syncVisioLabelsFromSchematicState(state) {
+  const root = document.querySelector("#visiojs_top");
+  if (!root || !state?.shapes) return;
+  state.shapes.forEach((shape, index) => {
+    if (shape == null || !shape.label) return;
+    const g = root.querySelector(`#shape_${index}`);
+    const textEl = g?.querySelector("text.visiojs_label");
+    if (textEl) {
+      textEl.textContent = shape.label.text ?? "";
+      if (shape.label.x != null) textEl.setAttribute("x", String(shape.label.x));
+      if (shape.label.y != null) textEl.setAttribute("y", String(shape.label.y));
+    }
+  });
 }
 
-export function VisioJSSchematic({ setResults, setNodes, setComponentValues, setFullyConnectedComponents, history, setHistory }) {
-  // const initializedRef = useRef(false);
-  // const [history, setHistory] = useState({ pointer: 0, state: [] });
+function calculateNextIndex(components, type, prefix) {
+  if (!components || Object.keys(components).length === 0) return initialLabels[type];
+  const sameType = Object.values(components).filter((c) => c.type === type);
+  let maxN = -1;
+  let matched = false;
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`^${escaped}(\\d+)$`);
+  for (const c of sameType) {
+    const m = (c.displayName || "").match(re);
+    if (m) {
+      matched = true;
+      maxN = Math.max(maxN, Number(m[1]));
+    }
+  }
+  if (matched) return `${prefix}${maxN + 1}`;
+  return `${prefix}${sameType.length === 0 ? 0 : sameType.length}`;
+}
+
+export function VisioJSSchematic({
+  setResults,
+  setNodes,
+  setComponentValues,
+  setFullyConnectedComponents,
+  setSchematicComponents,
+  history,
+  setHistory,
+  schematicSyncNonce = 0,
+}) {
   const [nextComponent, setNextComponent] = useState(initialLabels);
   const [vjs, setVjs] = useState(null);
   const [oldComponents, setComponents] = useState({});
@@ -63,112 +95,116 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
 
   const regenerateNodeMaps = useCallback(
     (newState) => {
-      // console.log("newState", newState);
       const { nodeMap, components, fullyConnectedComponents } = createNodeMap(newState, addShapes);
 
-      for (const [key, value] of Object.entries(components)) {
-        if (!(key in oldComponents) && value.type in componentDefaults) components[key] = { ...value, ...componentDefaults[value.type] };
-      }
       setComponentValues((oldValues) => {
         const newValues = { ...oldValues };
         for (const [key, value] of Object.entries(components)) {
           if (!(key in newValues) && value.type in componentDefaults) newValues[key] = { type: value.type, ...componentDefaults[value.type] };
         }
         for (const key in newValues) {
-          if (!(key in components)) delete newValues[key]; //remove components that are no longer present
+          if (!(key in components)) delete newValues[key];
         }
         if (JSON.stringify(oldValues) == JSON.stringify(newValues)) return oldValues;
         return newValues;
       });
 
-      //if the state didn't change then return the same nodeMap to prevent re-rendering
       setFullyConnectedComponents((old) => {
         if (JSON.stringify(old) == JSON.stringify(fullyConnectedComponents)) return old;
         return fullyConnectedComponents;
       });
-      // setFullyConnectedComponents(fullyConnectedComponents)
-      //CHANGE - 8th Feb 2026 - now if schematic changes at all, reset the results to empty. Otherwise hit bug where new components are added and Sympy can't handle it
+      setSchematicComponents((old) => {
+        if (JSON.stringify(old) == JSON.stringify(components)) return old;
+        return components;
+      });
       setNodes((/*old*/) => {
-        // if (JSON.stringify(old) == JSON.stringify(nodeMap)) return old;
         setResults({ ...emptyResults });
         return nodeMap;
       });
 
       setComponents(components);
-      //the keys of components are the names of the components. Find the next available name for each component type
       const tempNewComponent = {};
       for (const key in shapesWithLabels) tempNewComponent[key] = calculateNextIndex(components, key, shapesWithLabels[key]);
       setNextComponent(tempNewComponent);
     },
-    [oldComponents, setComponentValues, setFullyConnectedComponents, setNodes, setResults],
+    [setComponentValues, setFullyConnectedComponents, setSchematicComponents, setNodes, setResults],
   );
 
   const trackHistory = useCallback(
     (newState) => {
+      const patched = ensureCircuitIds(JSON.parse(JSON.stringify(newState)));
       setHistory((old_h) => {
-        const deepCopyState = JSON.parse(JSON.stringify(newState));
         const h = { ...old_h };
-        //there was an undo, then a new state was created. Throwing away the future history
         if (h.pointer < h.state.length - 1) h.state = h.state.slice(0, h.pointer + 1);
-        if (h.state.length == numUndos) h.state = [...h.state.slice(1), deepCopyState];
-        else h.state = [...h.state, deepCopyState];
+        if (h.state.length == numUndos) h.state = [...h.state.slice(1), patched];
+        else h.state = [...h.state, patched];
         h.pointer = h.state.length - 1;
         return h;
       });
-      regenerateNodeMaps(newState);
     },
-    [regenerateNodeMaps, setHistory],
+    [setHistory],
   );
 
-  const undo = useCallback(() => {
-    //when undo is called form useeffect it receives stale state. Therefore, all state accessing is done inside the setHistory function
-    setHistory((old_h) => {
-      if (old_h.pointer == 0) return old_h; //no more undos
-      vjs.redraw(old_h.state[old_h.pointer - 1]);
-      const h = { ...old_h };
-      h.pointer = h.pointer - 1;
-      return h;
+  const lastSynced = useRef({ p: -1, sig: "" });
+  const lastSchematicSyncNonce = useRef(-1);
+  /** visiojs.redraw uses internals that only exist after init(); effects run in order so init must run in the same effect before redraw. */
+  const vjsInitedRef = useRef(null);
+  useEffect(() => {
+    if (!vjs) {
+      vjsInitedRef.current = null;
+      return;
+    }
+    if (vjsInitedRef.current !== vjs) {
+      vjs.init();
+      vjsInitedRef.current = vjs;
+    }
+    const st = history.state[history.pointer];
+    const sig = JSON.stringify(st);
+    const forcedFromAdjuster = schematicSyncNonce !== lastSchematicSyncNonce.current;
+    if (forcedFromAdjuster) lastSchematicSyncNonce.current = schematicSyncNonce;
+    if (!forcedFromAdjuster && lastSynced.current.p === history.pointer && lastSynced.current.sig === sig) return;
+    lastSynced.current = { p: history.pointer, sig };
+    const stForVjs = JSON.parse(JSON.stringify(st));
+    vjs.redraw(stForVjs);
+    syncVisioLabelsFromSchematicState(stForVjs);
+    requestAnimationFrame(() => syncVisioLabelsFromSchematicState(stForVjs));
+    regenerateNodeMaps(stForVjs);
+  }, [vjs, history.pointer, history.state, regenerateNodeMaps, schematicSyncNonce]);
+
+  useEffect(() => {
+    if (vjs) return;
+    const st = ensureCircuitIds(JSON.parse(JSON.stringify(history.state[history.pointer])));
+    const newVjs = visiojs({
+      initialState: st,
+      stateChanged: trackHistory,
     });
-    regenerateNodeMaps(history.state[history.pointer - 1]);
-  }, [regenerateNodeMaps, setHistory, history, vjs]);
+    setVjs(newVjs);
+  }, [vjs, trackHistory, history.state, history.pointer]);
+
+  const undo = useCallback(() => {
+    setHistory((old_h) => {
+      if (old_h.pointer == 0) return old_h;
+      return { ...old_h, pointer: old_h.pointer - 1 };
+    });
+  }, [setHistory]);
 
   const redo = useCallback(() => {
     setHistory((old_h) => {
-      if (old_h.pointer >= old_h.state.length - 1) return old_h; //no more redos
-      vjs.redraw(old_h.state[old_h.pointer + 1]);
-      const h = { ...old_h };
-      h.pointer = h.pointer + 1;
-      return h;
+      if (old_h.pointer >= old_h.state.length - 1) return old_h;
+      return { ...old_h, pointer: old_h.pointer + 1 };
     });
-    regenerateNodeMaps(history.state[history.pointer + 1]);
-  }, [regenerateNodeMaps, setHistory, history, vjs]);
+  }, [setHistory]);
 
-  useEffect(() => {
-    if (!vjs) {
-      var newVjs = visiojs({
-        initialState: history.state[0],
-        stateChanged: trackHistory,
-      });
-      setVjs(newVjs);
-    }
-  }, [trackHistory, history, vjs]);
-
-  useEffect(() => {
-    if (vjs) vjs.init();
-  }, [vjs]);
-
-  //capture keypresses
   useEffect(() => {
     const handleKeyDown = (e) => {
       const isUndo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey;
       const isRedo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && e.shiftKey;
 
       if (isUndo) {
-        console.log("undo");
-        e.preventDefault(); // optional: prevent default browser undo
+        e.preventDefault();
         undo();
       } else if (isRedo) {
-        e.preventDefault(); // optional: prevent default browser redo
+        e.preventDefault();
         redo();
       }
     };
@@ -178,14 +214,16 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
   }, [undo, redo]);
 
   const allowedToAdd = {};
-  allowedToAdd["vin"] = !("iin" in oldComponents || "vin" in oldComponents);
-  allowedToAdd["vprobe"] = Object.keys(oldComponents).filter((k) => oldComponents[k].type == "vprobe").length < 2;
-  // console.log("allowedToAdd", allowedToAdd);
+  const compVals = Object.values(oldComponents);
+  allowedToAdd["vin"] = !compVals.some((c) => c.type === "iin" || c.type === "vin");
+  allowedToAdd["vprobe"] = compVals.filter((c) => c.type == "vprobe").length < 2;
+
   return (
     <Grid container spacing={1} sx={{ mt: 1 }}>
       <Grid container size={{ xs: 12, sm: 10 }} columns={{ xs: 3, md: 9 }}>
         {Object.keys(addShapes).map((key) => {
-          const shape = addShapes[key];
+          const base = addShapes[key];
+          const shape = JSON.parse(JSON.stringify(base));
           if ("label" in shape) shape.label.text = nextComponent[key];
           return (
             <Grid size={1} key={key}>
@@ -215,7 +253,7 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
                       window.dragData = shape;
                       e.dataTransfer.setData("application/json", JSON.stringify(shape));
                     }}
-                    onClick={() => vjs.addShape(shape)}
+                    onClick={() => vjs && vjs.addShape(shape)}
                   >
                     {key}
                   </Button>

@@ -1,6 +1,12 @@
-# Todo Oct 23rd
+# Todo Apr 2026
+- fix error that appears when floating cap is added
+- Allow user defined component names
+
+# Todo Oct 23rd 2025
 
 - Update all the packages - once Sympy 1.13.4 is integrated to Pyodide!
+//FIXME - remove once https://github.com/sympy/sympy/pull/27137 is merged into pyodide
+
 
 # visiojs todo
 
