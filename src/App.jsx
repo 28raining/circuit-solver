@@ -110,8 +110,6 @@ function App() {
   const [componentValues, setComponentValues] = useState(modifiedComponents);
   const [settings, setSettings] = useState(modifiedSettings);
   const [schemHistory, setSchemHistory] = useState({ pointer: 0, state: [modifiedSchematic] });
-  /** Bumped when labels are edited in the adjuster so visiojs always redraws the canvas. */
-  const [schematicSyncNonce, setSchematicSyncNonce] = useState(0);
   const [urlSnackbar, setUrlSnackbar] = useState(false);
   const [errorSnackbar, setErrorSnackbar] = useState(false);
   const [unsolveSnackbar, setUnsolveSnackbar] = useState(false);
@@ -275,7 +273,6 @@ function App() {
       state[i] = newState;
       return { ...h, state };
     });
-    setSchematicSyncNonce((n) => n + 1);
   }, []);
 
   function stateToURL() {
@@ -342,7 +339,6 @@ function App() {
                 setComponentValues={setComponentValues}
                 setFullyConnectedComponents={setFullyConnectedComponents}
                 setSchematicComponents={setSchematicComponents}
-                schematicSyncNonce={schematicSyncNonce}
               />
             </div>
             <div className="col-12">

@@ -43,25 +43,6 @@ Object.keys(shapesWithLabels).forEach((key) => {
   initialLabels[key] = `${shapesWithLabels[key]}0`;
 });
 
-/**
- * visiojs `su()` only creates the label <text> when the shape group is new; for existing shapes
- * it updates transform but never refreshes label text. Patch the SVG from schematic state.
- */
-function syncVisioLabelsFromSchematicState(state) {
-  const root = document.querySelector("#visiojs_top");
-  if (!root || !state?.shapes) return;
-  state.shapes.forEach((shape, index) => {
-    if (shape == null || !shape.label) return;
-    const g = root.querySelector(`#shape_${index}`);
-    const textEl = g?.querySelector("text.visiojs_label");
-    if (textEl) {
-      textEl.textContent = shape.label.text ?? "";
-      if (shape.label.x != null) textEl.setAttribute("x", String(shape.label.x));
-      if (shape.label.y != null) textEl.setAttribute("y", String(shape.label.y));
-    }
-  });
-}
-
 function calculateNextIndex(components, type, prefix) {
   if (!components || Object.keys(components).length === 0) return initialLabels[type];
   const sameType = Object.values(components).filter((c) => c.type === type);
@@ -88,7 +69,6 @@ export function VisioJSSchematic({
   setSchematicComponents,
   history,
   setHistory,
-  schematicSyncNonce = 0,
 }) {
   const [nextComponent, setNextComponent] = useState(initialLabels);
   const [vjs, setVjs] = useState(null);
@@ -196,7 +176,6 @@ export function VisioJSSchematic({
   );
 
   const lastSynced = useRef({ p: -1, sig: "" });
-  const lastSchematicSyncNonce = useRef(-1);
   /** visiojs.redraw uses internals that only exist after init(); effects run in order so init must run in the same effect before redraw. */
   const vjsInitedRef = useRef(null);
   useEffect(() => {
@@ -210,16 +189,12 @@ export function VisioJSSchematic({
     }
     const st = history.state[history.pointer];
     const sig = JSON.stringify(st);
-    const forcedFromAdjuster = schematicSyncNonce !== lastSchematicSyncNonce.current;
-    if (forcedFromAdjuster) lastSchematicSyncNonce.current = schematicSyncNonce;
-    if (!forcedFromAdjuster && lastSynced.current.p === history.pointer && lastSynced.current.sig === sig) return;
+    if (lastSynced.current.p === history.pointer && lastSynced.current.sig === sig) return;
     lastSynced.current = { p: history.pointer, sig };
     const stForVjs = JSON.parse(JSON.stringify(st));
     vjs.redraw(stForVjs);
-    syncVisioLabelsFromSchematicState(stForVjs);
-    requestAnimationFrame(() => syncVisioLabelsFromSchematicState(stForVjs));
     regenerateNodeMaps(stForVjs);
-  }, [vjs, history.pointer, history.state, regenerateNodeMaps, schematicSyncNonce]);
+  }, [vjs, history.pointer, history.state, regenerateNodeMaps]);
 
   useEffect(() => {
     if (vjs) return;
