@@ -218,9 +218,15 @@ export async function new_calculate_tf(pyodide, fRange, numSteps, componentValue
   try {
     // Use sympy to calculate magnitudes and phases for all frequencies and numeric representation
     // Optimized: Use lambdify to create a fast numeric function instead of slow evalf() calls
+    // Substitute via symbol names: a Python dict `{C0: 1}` treats C0 as a variable (NameError if
+    // that symbol was never created in a prior solve). JSON + free_symbols only touches symbols
+    // that actually appear in result_simplified (e.g. omits disconnected parts still in UI values).
+    const valuesJson = JSON.stringify(componentValuesSolved);
     const sympyString = `
-
-result_numeric = result_simplified.subs(${JSON.stringify(componentValuesSolved).replaceAll('"', "")})
+import json
+_name_vals = json.loads(${JSON.stringify(valuesJson)})
+_subs = {sym: _name_vals[sym.name] for sym in result_simplified.free_symbols if sym.name in _name_vals}
+result_numeric = result_simplified.subs(_subs)
 result_numeric_simplified = simplify(result_numeric)
 
 # Calculate numeric MathML and text representation

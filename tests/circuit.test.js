@@ -26,6 +26,27 @@ test("voltage in current probe - 1", async () => {
   expect(numericText).toEqual("1.0e-20*s^2/(1.0e-16*s^2 + 1.0e-6*s + 10000)");
 });
 
+/** Disconnected extra capacitor on schematic: values include C1 but MNA/symbol solve only has C0,L0,R0 — must not NameError on subs. */
+test("numeric TF ignores extra component values not in symbolic result", async () => {
+  const components = {
+    1: { id: 1, ports: [0, 1], type: "iprobe", sympyName: "Y0" },
+    2: { id: 2, ports: [0], type: "vin", sympyName: "vin" },
+    3: { id: 3, ports: [0, 2], type: "inductor", sympyName: "L0" },
+    4: { id: 4, ports: [1, 2], type: "resistor", sympyName: "R0" },
+    5: { id: 5, ports: [2, null], type: "capacitor", sympyName: "C0" },
+  };
+  const values = {
+    L0: 0.000001,
+    R0: 10000,
+    C0: 1.0000000000000002e-14,
+    C1: 1e-12,
+  };
+  const [textResult, _mathml] = await build_and_solve_mna(3, ["1"], components, values, pyodide);
+  const { numericText } = await new_calculate_tf(pyodide, { fmin: 1, fmax: 1000 }, 10, values, () => {});
+  expect(textResult).toEqual("C0*L0*s**2/(C0*L0*R0*s**2 + L0*s + R0)");
+  expect(numericText).toEqual("1.0e-20*s^2/(1.0e-16*s^2 + 1.0e-6*s + 10000)");
+});
+
 test("voltage in current probe - 2", async () => {
   const components = {
     1: { id: 1, ports: [0, 1], type: "resistor", sympyName: "R0" },
