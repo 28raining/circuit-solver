@@ -6,9 +6,22 @@ function removeFenced(mathml) {
   // return mathml;
   return mathml.replaceAll(/<mfenced>/g, "<mrow><mo>(</mo>").replaceAll(/<\/mfenced>/g, "<mo>)</mo></mrow>"); // replace <mfenced> with <mo>{</mo>
 }
-async function solveWithSymPy(matrixStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide) {
+
+/** SymPy symbol names used in the MNA matrix (RLC + VCVS + VCIS). */
+function collectMnaSymbolNames(elementMap) {
+  const set = new Set();
+  for (const el of Object.values(elementMap)) {
+    if (["resistor", "capacitor", "inductor", "vcvs", "vcis"].includes(el.type) && el.sympyName) {
+      set.add(el.sympyName);
+    }
+  }
+  return [...set];
+}
+
+async function solveWithSymPy(matrixStr, mnaMatrix, symbolNames, resIndex, resIndex2, componentValuesSolved, pyodide) {
   // const pyodide = await initPyodideAndSympy();
-  const symbols = `${[...Object.keys(elementMap), "s"].join(", ")} = symbols("${[...Object.keys(elementMap), "s"].join(" ")}", positive=True, real=True)`;
+  const symList = [...symbolNames, "s"];
+  const symbols = `${symList.join(", ")} = symbols("${symList.join(" ")}", positive=True, real=True)`;
   const matrixStrPow = matrixStr.replaceAll("^", "**");
 
   const sympyString = `
@@ -40,13 +53,17 @@ str(result_simplified), mathml(result_simplified, printer='presentation')
   }
 }
 
+function elementById(elementMap, id) {
+  return elementMap[String(id)] ?? elementMap[id];
+}
+
 // all these equations are based on
 // https://lpsa.swarthmore.edu/Systems/Electrical/mna/MNAAll.html
 export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedComponents, componentValuesSolved, pyodide) {
   var i, vinNode, iinNode;
 
   //Are we plotting current or voltage?
-  const plottingI = fullyConnectedComponents[chosenPlot[0]].type === "iprobe";
+  const plottingI = elementById(fullyConnectedComponents, chosenPlot[0]).type === "iprobe";
 
   const elementMap = fullyConnectedComponents;
   const numIprb = Object.values(elementMap).filter((el) => el.type === "iprobe").length;
@@ -58,15 +75,17 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
   // console.log("nodeArray 2", nodeArray);
   // console.log("elementMap", elementMap);
 
-  if ("vin" in elementMap) {
-    vinNode = elementMap["vin"].ports[0];
-  } else if ("iin" in elementMap) {
-    iinNode = elementMap["iin"].ports[0];
+  const vinEl = Object.values(elementMap).find((e) => e.type === "vin");
+  const iinEl = Object.values(elementMap).find((e) => e.type === "iin");
+  if (vinEl) {
+    vinNode = vinEl.ports[0];
+  } else if (iinEl) {
+    iinNode = iinEl.ports[0];
   } else {
     console.log("no iin or vin");
     return;
   }
-  const iinOrVin = "vin" in elementMap ? "vin" : "iin";
+  const iinOrVin = vinEl ? "vin" : "iin";
   const extraRow = iinOrVin == "vin" ? 1 : 0;
 
   var mnaMatrix = new Array(numNodes + extraRow + numActives + numIprb);
@@ -74,12 +93,12 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
 
   // Step 1 - loop thru elementMap and start adding things to the MNA
   var laplaceElement;
-  for (const name in elementMap) {
-    const el = elementMap[name];
+  for (const el of Object.values(elementMap)) {
     if (["inductor", "capacitor", "resistor"].includes(el.type)) {
-      if (el.type == "resistor") laplaceElement = name;
-      else if (el.type == "inductor") laplaceElement = `(s*${name})`;
-      else laplaceElement = `1/(s*${name})`;
+      const sym = el.sympyName;
+      if (el.type == "resistor") laplaceElement = sym;
+      else if (el.type == "inductor") laplaceElement = `(s*${sym})`;
+      else laplaceElement = `1/(s*${sym})`;
 
       //2.1 in the diagonal is the sum of all impedances connected to that node
       for (const p of el.ports) if (p !== null) mnaMatrix[p][p] += `+${laplaceElement}^(-1)`;
@@ -112,26 +131,26 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
   // current probes are implemented as 0V voltage sources, because the i thru voltage sources ends up in the resulting matric
   var opAmpCounter = 0;
   var iprbCounter = 0;
-  for (const name in elementMap) {
-    const el = elementMap[name];
+  for (const el of Object.values(elementMap)) {
+    const sym = el.sympyName;
     if (el.type === "opamp") {
       if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[0]] = "1";
       if (el.ports[1] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[1]] = "-1";
       if (el.ports[2] != null) mnaMatrix[el.ports[2]][numNodes + extraRow + opAmpCounter] = "1";
       opAmpCounter++;
     } else if (el.type === "vcvs") {
-      if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[0]] = `+${name}`;
-      if (el.ports[1] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[1]] = `-${name}`;
+      if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[0]] = `+${sym}`;
+      if (el.ports[1] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[1]] = `-${sym}`;
       if (el.ports[2] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[2]] += `+1`;
       if (el.ports[3] != null) mnaMatrix[numNodes + extraRow + opAmpCounter][el.ports[3]] += `-1`;
       if (el.ports[2] != null) mnaMatrix[el.ports[2]][numNodes + extraRow + opAmpCounter] = "1";
       if (el.ports[3] != null) mnaMatrix[el.ports[3]][numNodes + extraRow + opAmpCounter] = "-1";
       opAmpCounter++;
     } else if (el.type === "vcis") {
-      if (el.ports[2] != null && el.ports[0] != null) mnaMatrix[el.ports[2]][el.ports[0]] += `-${name}`;
-      if (el.ports[2] != null && el.ports[1] != null) mnaMatrix[el.ports[2]][el.ports[1]] += `+${name}`;
-      if (el.ports[3] != null && el.ports[0] != null) mnaMatrix[el.ports[3]][el.ports[0]] += `+${name}`;
-      if (el.ports[3] != null && el.ports[1] != null) mnaMatrix[el.ports[3]][el.ports[1]] += `-${name}`;
+      if (el.ports[2] != null && el.ports[0] != null) mnaMatrix[el.ports[2]][el.ports[0]] += `-${sym}`;
+      if (el.ports[2] != null && el.ports[1] != null) mnaMatrix[el.ports[2]][el.ports[1]] += `+${sym}`;
+      if (el.ports[3] != null && el.ports[0] != null) mnaMatrix[el.ports[3]][el.ports[0]] += `+${sym}`;
+      if (el.ports[3] != null && el.ports[1] != null) mnaMatrix[el.ports[3]][el.ports[1]] += `-${sym}`;
     } else if (el.type === "iprobe") {
       if (el.ports[0] != null) mnaMatrix[numNodes + extraRow + numActives + iprbCounter][el.ports[0]] = "1";
       if (el.ports[0] != null) mnaMatrix[el.ports[0]][numNodes + extraRow + numActives + iprbCounter] = "1";
@@ -147,25 +166,27 @@ export async function build_and_solve_mna(numNodes, chosenPlot, fullyConnectedCo
   }
   const nerdStr = nerdStrArr.join(",");
 
+  const symbolNames = collectMnaSymbolNames(elementMap);
+
   var resIndex = [];
   var resIndex2 = [];
   if (plottingI) {
     if (iinOrVin == "vin") resIndex.push(mnaMatrix.length, numNodes + 1);
     else resIndex.push(mnaMatrix.length, iinNode + 1);
   } else {
-    const voutNode = elementMap[chosenPlot[0]].ports[0];
+    const voutNode = elementById(elementMap, chosenPlot[0]).ports[0];
     if (iinOrVin == "vin") resIndex.push(voutNode + 1, numNodes + 1);
     else resIndex.push(voutNode + 1, iinNode + 1);
     if (chosenPlot.length == 2) {
       //are we plotting V or deltaV?
-      const voutNode2 = elementMap[chosenPlot[1]].ports[0];
+      const voutNode2 = elementById(elementMap, chosenPlot[1]).ports[0];
       if (iinOrVin == "vin") resIndex2.push(voutNode2 + 1, numNodes + 1);
       else resIndex2.push(voutNode2 + 1, iinNode + 1);
     }
   }
   var textResult, mathml;
 
-  [textResult, mathml] = await solveWithSymPy(nerdStr, mnaMatrix, elementMap, resIndex, resIndex2, componentValuesSolved, pyodide);
+  [textResult, mathml] = await solveWithSymPy(nerdStr, mnaMatrix, symbolNames, resIndex, resIndex2, componentValuesSolved, pyodide);
 
   return [textResult, mathml];
 }

@@ -1,11 +1,14 @@
-function elementMapper(s) {
+import { commitLabelForType } from "./componentNaming.js";
+
+function elementMapper(s, shapeIndex) {
   const shapeType = s.image.split(".")[0];
-  const name = s.label ? s.label.text : "";
-  if (s.image == "vin.svg") return { type: "vin", name: "vin" };
-  if (s.image == "iin.svg") return { type: "iin", name: "iin" };
+  if (s.image == "vin.svg") return { type: "vin", id: shapeIndex, sympyName: "vin" };
+  if (s.image == "iin.svg") return { type: "iin", id: shapeIndex, sympyName: "iin" };
   // else if (s.image == "vout.svg") return { type: "vprobe", name: "X0" };
-  else if (s.image == "gnd.svg") return { type: "gnd", name: "gnd" };
-  else return { type: shapeType, name: name };
+  else if (s.image == "gnd.svg") return { type: "gnd", id: shapeIndex, sympyName: "gnd" };
+  const rawLabel = s.label ? s.label.text : "";
+  const sympyName = commitLabelForType(shapeType, rawLabel, shapeIndex);
+  return { type: shapeType, id: shapeIndex, sympyName };
 }
 
 //convert from visiojs json to array of nodes which are connected to vin
@@ -16,12 +19,18 @@ export function createNodeMap(newState, addShapes) {
   const fullyConnectedComponents = {};
 
   var nodeMap = [];
-  newState.shapes.map((s) => {
+  newState.shapes.forEach((s, shapeIndex) => {
     if (s === null) return; //skip deleted shapes
     if (!("connectors" in s)) return; //skip shapes without connectors
-    var z = elementMapper(s);
+    var z = elementMapper(s, shapeIndex);
+    const key = String(z.id);
     //use portConnections because a cap can have 2 wires to 1 port. We need to check every port is connected...
-    components[z.name] = { type: z.type, portConnections: Array(s.connectors.length).fill(false) };
+    components[key] = {
+      type: z.type,
+      sympyName: z.sympyName,
+      id: z.id,
+      portConnections: Array(s.connectors.length).fill(false),
+    };
   });
 
   // const numConnections = Object.fromEntries(components.map(s=>s.name));
@@ -33,13 +42,16 @@ export function createNodeMap(newState, addShapes) {
   var crushedNodes = [];
   for (const w of newState.wires) {
     if (w == null) continue; //skip deleted wires
-    const startEl = elementMapper(newState.shapes[w.start.shapeID]);
-    const endEl = elementMapper(newState.shapes[w.end.shapeID]);
+    const startShape = newState.shapes[w.start.shapeID];
+    const endShape = newState.shapes[w.end.shapeID];
+    if (startShape == null || endShape == null) continue;
+    const startEl = elementMapper(startShape, w.start.shapeID);
+    const endEl = elementMapper(endShape, w.end.shapeID);
 
     start = { ...startEl, port: w.start.connectorID };
     end = { ...endEl, port: w.end.connectorID };
-    components[startEl.name].portConnections[w.start.connectorID] = true;
-    components[endEl.name].portConnections[w.end.connectorID] = true;
+    components[String(startEl.id)].portConnections[w.start.connectorID] = true;
+    components[String(endEl.id)].portConnections[w.end.connectorID] = true;
     crushedNodes.push([start, end]);
 
     // if (startEl.type == "gnd" || endEl.type == "gnd") continue; //don't add ground nodes to the node map
@@ -75,7 +87,7 @@ export function createNodeMap(newState, addShapes) {
           const node = crushedNodes[nodeIndex];
           for (const conn2_index in node) {
             const conn2 = node[conn2_index];
-            if (conn.name == conn2.name && conn.port == conn2.port) {
+            if (conn.id === conn2.id && conn.port === conn2.port) {
               // console.log("found a match", conn, conn2, "in node", node);
               //merge the nodes
               // if (nodeIndex != index) {
@@ -92,15 +104,12 @@ export function createNodeMap(newState, addShapes) {
     }
   } while (wasChanged);
 
-  //delete the node containing gnd
-  outerLoop: for (const index in crushedNodes) {
-    const node = crushedNodes[index];
-    for (const conn of node) {
-      if (conn.type == "gnd") {
-        // console.log("found gnd node", node, "at index", index);
-        crushedNodes.splice(index, 1);
-        break outerLoop; //break to avoid checking the rest of the connections
-      }
+  //delete any node containing gnd (was single-gnd removal; now all gnd supernodes)
+  for (let gi = crushedNodes.length - 1; gi >= 0; gi--) {
+    const node = crushedNodes[gi];
+    if (node.some((conn) => conn.type == "gnd")) {
+      // console.log("found gnd node", node, "at index", gi);
+      crushedNodes.splice(gi, 1);
     }
   }
 
@@ -111,7 +120,7 @@ export function createNodeMap(newState, addShapes) {
       for (let j = i + 1; j < crushedNodes[n].length; j++) {
         const conn2 = crushedNodes[n][j];
         // console.log("conns", conn, conn2);
-        if (conn.name == conn2.name && conn.port == conn2.port) {
+        if (conn.id === conn2.id && conn.port === conn2.port) {
           // console.log("found a duplicate", conn, "in node", crushedNodes[n]);
           crushedNodes[n].splice(j, 1); //remove the duplicate
           j--; //decrement j to account for the removed element
@@ -126,7 +135,7 @@ export function createNodeMap(newState, addShapes) {
   for (const [key, value] of Object.entries(components)) {
     if (value.portConnections.includes(false)) {
       for (const node in nodeMapPre) {
-        nodeMapPre[node] = nodeMapPre[node].filter((c) => c.name != key);
+        nodeMapPre[node] = nodeMapPre[node].filter((c) => String(c.id) != key);
       }
     }
   }
@@ -144,7 +153,7 @@ export function createNodeMap(newState, addShapes) {
     // console.error("No vin or vout node found in the node map");
     // } else {
     var connected_nodes = [vin_node];
-    var connected_elements = nodeMapPre[vin_node].map((c) => c.name);
+    var connected_elements = nodeMapPre[vin_node].map((c) => c.id);
     var pushed;
     for (var i = 0; i < connected_elements.length; i++) {
       for (const node in nodeMapPre) {
@@ -152,10 +161,10 @@ export function createNodeMap(newState, addShapes) {
         if (connected_nodes.includes(node)) continue; //skip already connected nodes
         pushed = false;
         for (const conn of nodeMapPre[node]) {
-          if (connected_elements.includes(conn.name)) {
+          if (connected_elements.includes(conn.id)) {
             if (!pushed) connected_nodes.push(node);
             pushed = true;
-            connected_elements.push(...nodeMapPre[node].map((c) => c.name).filter((c) => !connected_elements.includes(c)));
+            connected_elements.push(...nodeMapPre[node].map((c) => c.id).filter((c) => !connected_elements.includes(c)));
             // break; //break to avoid checking the rest of the connections
           }
         }
@@ -174,14 +183,17 @@ export function createNodeMap(newState, addShapes) {
     nodeMap.forEach((node, i) => {
       // for (j = 0; j < nodeArray[i].length; j++) {
       node.forEach((comp) => {
-        // element = comp.name;
-        if (!(comp.name in fullyConnectedComponents)) {
-          fullyConnectedComponents[comp.name] = {
+        // element = comp.sympyName;
+        const elKey = String(comp.id);
+        if (!(elKey in fullyConnectedComponents)) {
+          fullyConnectedComponents[elKey] = {
+            id: comp.id,
+            sympyName: comp.sympyName,
             ports: Array(addShapes[comp.type].connectors.length).fill(null),
             type: comp.type,
           };
         }
-        fullyConnectedComponents[comp.name].ports[comp.port] = i;
+        fullyConnectedComponents[elKey].ports[comp.port] = i;
       });
     });
   }

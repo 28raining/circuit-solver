@@ -1,17 +1,17 @@
 // import { visiojs } from "/visiojs/package/dist/visiojs.js";
 import visiojs from "visiojs";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
 import { createNodeMap } from "./visiojs_to_matrix.js";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UndoIcon from "@mui/icons-material/Undo";
 import RedoIcon from "@mui/icons-material/Redo";
-import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
 import Grid from "@mui/material/Grid";
 
 import { addShapes, emptyResults } from "./common.js";
+import { nextDefaultLabel, commitLabelForType } from "./componentNaming.js";
 
 const shapesWithLabels = {
   resistor: "R",
@@ -41,23 +41,33 @@ Object.keys(shapesWithLabels).forEach((key) => {
   initialLabels[key] = `${shapesWithLabels[key]}0`;
 });
 
-function calculateNextIndex(components, type, prefix) {
-  if (!components) return initialLabels[type];
-  if (Object.keys(components).length == 0) return initialLabels[type];
-  // console.log("calculateNextIndex", type, prefix, components);
-  const existingLabels = Object.keys(components)
-    .filter((k) => components[k].type == type)
-    .map((c) => Number(c.slice(1)));
-  // console.log("existingLabels", type, existingLabels, Math.max(...existingLabels)+1);
-  return `${prefix}${existingLabels.length == 0 ? 0 : Math.max(...existingLabels) + 1}`;
+function calculateNextLabel(components, type) {
+  const names = Object.values(components)
+    .filter((c) => c.type === type)
+    .map((c) => c.sympyName);
+  return nextDefaultLabel(type, names) || initialLabels[type];
 }
 
-export function VisioJSSchematic({ setResults, setNodes, setComponentValues, setFullyConnectedComponents, history, setHistory }) {
+export const VisioJSSchematic = forwardRef(function VisioJSSchematic(
+  { setResults, setNodes, setComponentValues, setFullyConnectedComponents, setSchematicComponents, history, setHistory },
+  ref,
+) {
   // const initializedRef = useRef(false);
   // const [history, setHistory] = useState({ pointer: 0, state: [] });
   const [nextComponent, setNextComponent] = useState(initialLabels);
   const [vjs, setVjs] = useState(null);
   const [oldComponents, setComponents] = useState({});
+  const historyRef = useRef(history);
+  const vjsRef = useRef(null);
+  const skipNextStateChanged = useRef(false);
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
+
+  useEffect(() => {
+    vjsRef.current = vjs;
+  }, [vjs]);
 
   const numUndos = 15;
 
@@ -87,6 +97,11 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
         return fullyConnectedComponents;
       });
       // setFullyConnectedComponents(fullyConnectedComponents)
+      setSchematicComponents((old) => {
+        const next = { ...components };
+        if (JSON.stringify(old) == JSON.stringify(next)) return old;
+        return next;
+      });
       //CHANGE - 8th Feb 2026 - now if schematic changes at all, reset the results to empty. Otherwise hit bug where new components are added and Sympy can't handle it
       setNodes((/*old*/) => {
         // if (JSON.stringify(old) == JSON.stringify(nodeMap)) return old;
@@ -95,16 +110,59 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
       });
 
       setComponents(components);
-      //the keys of components are the names of the components. Find the next available name for each component type
+      // Per-shape ids are object keys; default labels (R0, C1, …) come from existing sympyName values on the canvas
       const tempNewComponent = {};
-      for (const key in shapesWithLabels) tempNewComponent[key] = calculateNextIndex(components, key, shapesWithLabels[key]);
+      for (const key in shapesWithLabels) tempNewComponent[key] = calculateNextLabel(components, key);
       setNextComponent(tempNewComponent);
     },
-    [oldComponents, setComponentValues, setFullyConnectedComponents, setNodes, setResults],
+    [oldComponents, setComponentValues, setFullyConnectedComponents, setSchematicComponents, setNodes, setResults],
+  );
+
+  const commitSchematicState = useCallback(
+    (newState) => {
+      setHistory((old_h) => {
+        const deepCopyState = JSON.parse(JSON.stringify(newState));
+        const h = { ...old_h };
+        //there was an undo, then a new state was created. Throwing away the future history
+        if (h.pointer < h.state.length - 1) h.state = h.state.slice(0, h.pointer + 1);
+        if (h.state.length == numUndos) h.state = [...h.state.slice(1), deepCopyState];
+        else h.state = [...h.state, deepCopyState];
+        h.pointer = h.state.length - 1;
+        return h;
+      });
+      regenerateNodeMaps(newState);
+    },
+    [regenerateNodeMaps, setHistory],
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      setShapeLabel(shapeId, rawText) {
+        const h = historyRef.current;
+        const newState = JSON.parse(JSON.stringify(h.state[h.pointer]));
+        const shape = newState.shapes[shapeId];
+        if (!shape?.label) return;
+        const shapeType = shape.image.split(".")[0];
+        shape.label.text = commitLabelForType(shapeType, rawText, shapeId);
+        skipNextStateChanged.current = true;
+        const v = vjsRef.current;
+        if (v) v.redraw(newState);
+        commitSchematicState(newState);
+        setTimeout(() => {
+          skipNextStateChanged.current = false;
+        }, 0);
+      },
+    }),
+    [commitSchematicState],
   );
 
   const trackHistory = useCallback(
     (newState) => {
+      if (skipNextStateChanged.current) {
+        skipNextStateChanged.current = false;
+        return;
+      }
       setHistory((old_h) => {
         const deepCopyState = JSON.parse(JSON.stringify(newState));
         const h = { ...old_h };
@@ -177,16 +235,19 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [undo, redo]);
 
+  const hasVin = Object.values(oldComponents).some((c) => c.type === "vin");
+  const hasIin = Object.values(oldComponents).some((c) => c.type === "iin");
   const allowedToAdd = {};
-  allowedToAdd["vin"] = !("iin" in oldComponents || "vin" in oldComponents);
-  allowedToAdd["vprobe"] = Object.keys(oldComponents).filter((k) => oldComponents[k].type == "vprobe").length < 2;
+  allowedToAdd["vin"] = !hasVin && !hasIin;
+  allowedToAdd["iin"] = !hasVin && !hasIin;
+  allowedToAdd["vprobe"] = Object.values(oldComponents).filter((c) => c.type == "vprobe").length < 2;
   // console.log("allowedToAdd", allowedToAdd);
   return (
     <Grid container spacing={1} sx={{ mt: 1 }}>
       <Grid container size={{ xs: 12, sm: 10 }} columns={{ xs: 3, md: 9 }}>
         {Object.keys(addShapes).map((key) => {
-          const shape = addShapes[key];
-          if ("label" in shape) shape.label.text = nextComponent[key];
+          const shape = { ...addShapes[key] };
+          if ("label" in shape) shape.label = { ...shape.label, text: nextComponent[key] };
           return (
             <Grid size={1} key={key}>
               <Tooltip
@@ -194,7 +255,7 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
                 title={
                   key == "vin" && !allowedToAdd["vin"]
                     ? "max 1 vin or iin "
-                    : key == "iin" && !allowedToAdd["vin"]
+                    : key == "iin" && !allowedToAdd["iin"]
                       ? "max 1 vin or iin "
                       : key == "vprobe" && !allowedToAdd["vprobe"]
                         ? "max 2 vprobes"
@@ -209,7 +270,7 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
                     key={key}
                     style={{ cursor: "grab", marginRight: "10px", height: "100%" }}
                     size="small"
-                    disabled={key == "vin" ? !allowedToAdd["vin"] : key == "iin" ? !allowedToAdd["vin"] : key == "vprobe" ? !allowedToAdd["vprobe"] : false}
+                    disabled={key == "vin" ? !allowedToAdd["vin"] : key == "iin" ? !allowedToAdd["iin"] : key == "vprobe" ? !allowedToAdd["vprobe"] : false}
                     draggable="true"
                     onDragStart={(e) => {
                       window.dragData = shape;
@@ -251,4 +312,4 @@ export function VisioJSSchematic({ setResults, setNodes, setComponentValues, set
       </Grid>
     </Grid>
   );
-}
+});
