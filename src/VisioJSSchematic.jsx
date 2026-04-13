@@ -131,7 +131,7 @@ export function VisioJSSchematic({
     const newState = history.state[history.pointer];
     if (!newState) return;
     regenerateNodeMapsRef.current(newState);
-  }, [history.pointer, history.state.length]);
+  }, [history]);
 
   function undo() {
     setHistory((old_h) => {
