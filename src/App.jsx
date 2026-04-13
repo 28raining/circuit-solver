@@ -311,7 +311,7 @@ function App() {
           <div className="row shadow-sm rounded bg-lightgreen my-2 py-0" id="schematic">
             <div className="col-12">
               <VisioJSSchematic
-                ref={schematicRef}
+                schematicApiRef={schematicRef}
                 setResults={setResults}
                 setNodes={setNodes}
                 history={schemHistory}

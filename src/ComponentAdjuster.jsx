@@ -54,7 +54,7 @@ export function ComponentAdjuster({ componentValues, setComponentValues, schemat
         const sharedHint = dupList && dupList.length > 1 && !showValue;
 
         return (
-          <Grid size={{ md: 3 }} key={key}>
+          <Grid size={3} key={key}>
             <Card sx={{ p: 1, m: 1, width: "100%" }}>
 
               <Stack direction="row" spacing={0} alignItems="center">
@@ -74,15 +74,13 @@ export function ComponentAdjuster({ componentValues, setComponentValues, schemat
                     onChange={(e) => handleValueChange(key, e.target.value)}
                   // fullWidth
                   />
-                  <FormControl size="small">
-                    <Select value={componentValues[key].unit} onChange={(e) => handleUnitChange(key, e.target.value)}>
-                      {Object.keys(units[componentValues[key].type]).map((opt) => (
-                        <MenuItem key={opt} value={opt} size="small">
-                          {opt}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Select value={componentValues[key].unit} onChange={(e) => handleUnitChange(key, e.target.value)} size="small">
+                    {Object.keys(units[componentValues[key].type]).map((opt) => (
+                      <MenuItem key={opt} value={opt} size="small">
+                        {opt}
+                      </MenuItem>
+                    ))}
+                  </Select>
                 </>) : null}
               </Stack>
             </Card>
