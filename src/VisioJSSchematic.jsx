@@ -48,16 +48,7 @@ function calculateNextLabel(components, type) {
   return nextDefaultLabel(type, names) || initialLabels[type];
 }
 
-export function VisioJSSchematic({
-  schematicApiRef,
-  setResults,
-  setNodes,
-  setComponentValues,
-  setFullyConnectedComponents,
-  setSchematicComponents,
-  history,
-  setHistory,
-}) {
+export function VisioJSSchematic({ schematicApiRef, setResults, setNodes, setComponentValues, setFullyConnectedComponents, setSchematicComponents, history, setHistory }) {
   const [nextComponent, setNextComponent] = useState(initialLabels);
   const [vjs, setVjs] = useState(null);
   const [oldComponents, setComponents] = useState({});
@@ -127,6 +118,10 @@ export function VisioJSSchematic({
     });
   }
 
+  const trackHistoryRef = useRef(trackHistory);
+  trackHistoryRef.current = trackHistory;
+  const initialCanvasStateRef = useRef(history.state[0]);
+
   useEffect(() => {
     const newState = history.state[history.pointer];
     if (!newState) return;
@@ -182,8 +177,8 @@ export function VisioJSSchematic({
 
   useEffect(() => {
     const newVjs = visiojs({
-      initialState: history.state[0],
-      stateChanged: trackHistory,
+      initialState: initialCanvasStateRef.current,
+      stateChanged: (s) => trackHistoryRef.current(s),
     });
     setVjs(newVjs);
   }, []);

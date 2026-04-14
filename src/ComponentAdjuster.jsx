@@ -56,7 +56,6 @@ export function ComponentAdjuster({ componentValues, setComponentValues, schemat
         return (
           <Grid size={3} key={key}>
             <Card sx={{ p: 1, m: 1, width: "100%" }}>
-
               <Stack direction="row" spacing={0} alignItems="center">
                 <LabelField shapeId={Number(key)} sympyName={sympyName} onCommit={commitLabel} />
 
@@ -65,23 +64,25 @@ export function ComponentAdjuster({ componentValues, setComponentValues, schemat
                     Same symbol as {el.sympyName}; value is set there.
                   </Typography>
                 ) : null}
-                {showValue ? (<>
-                  <TextField
-                    name={key}
-                    value={componentValues[key].value}
-                    sx={{ width: "8ch" }}
-                    size="small"
-                    onChange={(e) => handleValueChange(key, e.target.value)}
-                  // fullWidth
-                  />
-                  <Select value={componentValues[key].unit} onChange={(e) => handleUnitChange(key, e.target.value)} size="small">
-                    {Object.keys(units[componentValues[key].type]).map((opt) => (
-                      <MenuItem key={opt} value={opt} size="small">
-                        {opt}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </>) : null}
+                {showValue ? (
+                  <>
+                    <TextField
+                      name={key}
+                      value={componentValues[key].value}
+                      sx={{ width: "8ch" }}
+                      size="small"
+                      onChange={(e) => handleValueChange(key, e.target.value)}
+                      // fullWidth
+                    />
+                    <Select value={componentValues[key].unit} onChange={(e) => handleUnitChange(key, e.target.value)} size="small">
+                      {Object.keys(units[componentValues[key].type]).map((opt) => (
+                        <MenuItem key={opt} value={opt} size="small">
+                          {opt}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </>
+                ) : null}
               </Stack>
             </Card>
           </Grid>
