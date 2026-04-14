@@ -7,6 +7,12 @@ import CircularProgress from "@mui/material/CircularProgress";
 import { initPyodideAndSympy } from "./pyodideLoader";
 import { emptyResults, formatMathML } from "./common.js"; // Import the emptyResults object
 
+function probeFractionLabel(fcc, p) {
+  if (!p.includes("-")) return fcc[p]?.sympyName ?? p;
+  const [a, b] = p.split("-");
+  return `${fcc[a]?.sympyName ?? a}-${fcc[b]?.sympyName ?? b}`;
+}
+
 export function ChoseTF({ setResults, nodes, fullyConnectedComponents, componentValuesSolved, setUnsolveSnackbar }) {
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
@@ -47,13 +53,8 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
     probes.push(`${vprobes[1]}-${vprobes[0]}`);
   }
 
-  // add a value field based on if user chose algebraic or numeric
-  const valueForAlgebra = {};
-  for (const c in fullyConnectedComponents) {
-    if (c in componentValuesSolved) valueForAlgebra[c] = componentValuesSolved[c];
-    // else valueForAlgebra[c] = c;
-  }
-  // console.log("componentValuesSolved", componentValuesSolved, fullyConnectedComponents, algebraic);
+  // componentValuesSolved is keyed by SymPy symbol; passed through to build_and_solve_mna / subs
+  // console.log("componentValuesSolved", componentValuesSolved, fullyConnectedComponents);
   return (
     <Grid container spacing={1} sx={{ mt: 1 }}>
       {drivers.length == 0 || probes.length == 0 ? (
@@ -68,6 +69,7 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
 
           {probes.map((p) => {
             const int_probes = p.includes("-") ? p.split("-") : [p];
+            const label = probeFractionLabel(fullyConnectedComponents, p);
 
             return (
               <Grid size={{ xs: 4, sm: 2, lg: 1 }} key={p}>
@@ -80,23 +82,21 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
                   sx={{ py: 1, justifyContent: "center", fontSize: "1.4em" }}
                   onClick={async () => {
                     setCalculating(true);
-                    setResults({ ...emptyResults }); // Reset results to empty
-                    //this console log is for collecting data for testing
-                    // console.log(nodes.length, int_probes, fullyConnectedComponents, valueForAlgebra, loadedPyo);
-                    const [textResult, mathml] = await build_and_solve_mna(nodes.length, int_probes, fullyConnectedComponents, valueForAlgebra, loadedPyo);
+                    setResults({ ...emptyResults });
+                    const [textResult, mathml] = await build_and_solve_mna(nodes.length, int_probes, fullyConnectedComponents, componentValuesSolved, loadedPyo);
                     if (textResult === "" && mathml === "") {
                       setUnsolveSnackbar((x) => {
                         if (!x) return true;
                         else return x;
                       });
                     }
-                    const editedMathMl = formatMathML(mathml, p, drivers);
+                    const editedMathMl = formatMathML(mathml, label, drivers);
                     setResults({
                       text: textResult,
                       mathML: editedMathMl,
                       complexResponse: "",
                       solver: loadedPyo,
-                      probeName: p,
+                      probeName: label,
                       drivers: drivers,
                     });
                     setCalculating(false);
@@ -110,7 +110,7 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
                   ) : (
                     <math xmlns="http://www.w3.org/1998/Math/MathML">
                       <mfrac>
-                        <mi>{p}</mi>
+                        <mi>{label}</mi>
                         {drivers[0] == "vin" ? (
                           <msub>
                             <mi>V</mi>

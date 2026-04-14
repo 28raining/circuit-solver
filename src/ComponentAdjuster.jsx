@@ -7,12 +7,24 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 
 import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import FormControl from "@mui/material/FormControl";
 
+import { useEffect, useState } from "react";
 import { units } from "./common";
+import { sympyNameGroupsForValueTypes, isCanonicalValueRow } from "./sympyValues.js";
 
-export function ComponentAdjuster({ componentValues, setComponentValues }) {
+function LabelField({ shapeId, sympyName, onCommit }) {
+  const [val, setVal] = useState(sympyName);
+  useEffect(() => {
+    setVal(sympyName);
+  }, [sympyName]);
+
+  return <TextField label="Name" value={val} size="small" sx={{ minWidth: "10ch" }} onChange={(e) => setVal(e.target.value)} onBlur={() => onCommit(shapeId, val)} />;
+}
+
+export function ComponentAdjuster({ componentValues, setComponentValues, schematicComponents, schematicRef }) {
+  const groups = sympyNameGroupsForValueTypes(schematicComponents);
+
   function handleValueChange(name, value) {
     setComponentValues((prevValues) => ({
       ...prevValues,
@@ -26,36 +38,56 @@ export function ComponentAdjuster({ componentValues, setComponentValues }) {
     }));
   }
 
+  function commitLabel(shapeId, raw) {
+    schematicRef?.current?.setShapeLabel(shapeId, raw);
+  }
+
+  const sortedIds = Object.keys(componentValues).sort((a, b) => Number(a) - Number(b));
+
   return (
     <Grid container spacing={2}>
-      {Object.keys(componentValues).map((key) => (
-        <Grid size={{ md: 3 }} key={key}>
-          <Card sx={{ p: 1, m: 1, width: "100%" }}>
-            <Stack direction="row" spacing={0} alignItems="center" sx={{ borderRadius: 1 }}>
-              <Typography variant="h5" sx={{ mr: 1 }}>
-                {key}
-              </Typography>
-              <TextField
-                name={key}
-                value={componentValues[key].value}
-                sx={{ width: "8ch" }}
-                size="small"
-                onChange={(e) => handleValueChange(key, e.target.value)}
-                // fullWidth
-              />
-              <FormControl size="small">
-                <Select value={componentValues[key].unit} onChange={(e) => handleUnitChange(key, e.target.value)}>
-                  {Object.keys(units[componentValues[key].type]).map((opt) => (
-                    <MenuItem key={opt} value={opt} size="small">
-                      {opt}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Stack>
-          </Card>
-        </Grid>
-      ))}
+      {sortedIds.map((key) => {
+        const el = schematicComponents[key];
+        const sympyName = el?.sympyName ?? "";
+        const showValue = isCanonicalValueRow(key, schematicComponents, groups);
+        const dupList = el ? groups[el.sympyName] : null;
+        const sharedHint = dupList && dupList.length > 1 && !showValue;
+
+        return (
+          <Grid size={3} key={key}>
+            <Card sx={{ p: 1, m: 1, width: "100%" }}>
+              <Stack direction="row" spacing={0} alignItems="center">
+                <LabelField shapeId={Number(key)} sympyName={sympyName} onCommit={commitLabel} />
+
+                {sharedHint ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                    Same symbol as {el.sympyName}; value is set there.
+                  </Typography>
+                ) : null}
+                {showValue ? (
+                  <>
+                    <TextField
+                      name={key}
+                      value={componentValues[key].value}
+                      sx={{ width: "8ch" }}
+                      size="small"
+                      onChange={(e) => handleValueChange(key, e.target.value)}
+                      // fullWidth
+                    />
+                    <Select value={componentValues[key].unit} onChange={(e) => handleUnitChange(key, e.target.value)} size="small">
+                      {Object.keys(units[componentValues[key].type]).map((opt) => (
+                        <MenuItem key={opt} value={opt} size="small">
+                          {opt}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </>
+                ) : null}
+              </Stack>
+            </Card>
+          </Grid>
+        );
+      })}
     </Grid>
   );
 }

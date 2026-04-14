@@ -10,6 +10,7 @@ import { FreqAdjusters } from "./FreqAdjusters.jsx";
 // import Grid from "@mui/material/Grid";
 import { units, formatMathML } from "./common.js";
 import { calcBilinear, new_calculate_tf } from "./new_solveMNA.js";
+import { buildComponentValuesForSympy } from "./sympyValues.js";
 
 import { NavBar } from "./NavBar.jsx";
 import { ChoseTF } from "./ChoseTF.jsx";
@@ -25,18 +26,19 @@ import SnackbarContent from "@mui/material/SnackbarContent";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
 
+/** Shape indices in initialSchematic: inductor 3, resistor 4, capacitor 5 */
 const initialComponents = {
-  L0: {
+  3: {
     type: "inductor",
     value: 1,
     unit: "uH",
   },
-  R0: {
+  4: {
     type: "resistor",
     value: 10,
     unit: "KΩ",
   },
-  C0: {
+  5: {
     type: "capacitor",
     value: 10,
     unit: "fF",
@@ -66,8 +68,13 @@ function stateFromURL() {
   if (componentsParam) {
     urlContainsState = true; // Set the flag if components are present in the URL
     modifiedComponents = componentsParam.split("__").reduce((acc, comp) => {
-      const [key, type, value, unit] = comp.split("_");
-      acc[key] = { type, value: parseFloat(value), unit };
+      const parts = comp.split("_");
+      if (parts.length < 4) return acc;
+      const id = parts[0];
+      const type = parts[1];
+      const value = parts[2];
+      const unit = parts.slice(3).join("_");
+      acc[id] = { type, value: parseFloat(value), unit };
       return acc;
     }, {});
     // setComponentValues(componentsArray);
@@ -98,9 +105,12 @@ function compToURL(key, value) {
 }
 
 function App() {
+  const schematicRef = useRef(null);
   const [nodes, setNodes] = useState([]);
 
   const [fullyConnectedComponents, setFullyConnectedComponents] = useState({});
+  /** All placed shapes with connectors (from createNodeMap), including off the vin subgraph — used for names & duplicate-value UI */
+  const [schematicComponents, setSchematicComponents] = useState({});
   const [results, setResults] = useState({ text: "", mathML: "", complexResponse: "", solver: null, probeName: "", drivers: [] });
   const [numericResults, setNumericResults] = useState({ numericML: "", numericText: "" });
   const [bilinearResults, setBilinearResults] = useState({ bilinearML: "", bilinearText: "" });
@@ -191,8 +201,8 @@ function App() {
     );
   }
 
-  const componentValuesSolved = {};
-  for (const key in componentValues) componentValuesSolved[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
+  // Numeric values keyed by SymPy symbol name for algebraic/numeric TF (canonical row per shared name)
+  const componentValuesSolved = buildComponentValuesForSympy(componentValues, schematicComponents);
 
   const [freq_new, setFreqNew] = useState(null);
   const [mag_new, setMagNew] = useState(null);
@@ -217,8 +227,7 @@ function App() {
           return;
         }
         const fRange = { fmin: settings.fmin * units.frequency[settings.fminUnit], fmax: settings.fmax * units.frequency[settings.fmaxUnit] };
-        const componentValuesSolved2 = {};
-        for (const key in componentValues) componentValuesSolved2[key] = componentValues[key].value * units[componentValues[key].type][componentValues[key].unit];
+        const componentValuesSolved2 = buildComponentValuesForSympy(componentValues, schematicComponents);
         const { freq_new, mag_new, phase_new, numericML, numericText } = await new_calculate_tf(
           results.solver,
           fRange,
@@ -243,7 +252,7 @@ function App() {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [results, settings, componentValues]);
+  }, [results, settings, componentValues, schematicComponents]);
 
   function stateToURL() {
     const url = new URL(window.location.href);
@@ -302,16 +311,18 @@ function App() {
           <div className="row shadow-sm rounded bg-lightgreen my-2 py-0" id="schematic">
             <div className="col-12">
               <VisioJSSchematic
+                schematicApiRef={schematicRef}
                 setResults={setResults}
                 setNodes={setNodes}
                 history={schemHistory}
                 setHistory={setSchemHistory}
                 setComponentValues={setComponentValues}
                 setFullyConnectedComponents={setFullyConnectedComponents}
+                setSchematicComponents={setSchematicComponents}
               />
             </div>
             <div className="col-12">
-              <ComponentAdjuster componentValues={componentValues} setComponentValues={setComponentValues} />
+              <ComponentAdjuster componentValues={componentValues} setComponentValues={setComponentValues} schematicComponents={schematicComponents} schematicRef={schematicRef} />
             </div>
           </div>
           <div className="row shadow-sm rounded bg-lightgreen my-2 py-3" id="schematic">
