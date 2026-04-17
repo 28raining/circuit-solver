@@ -1,12 +1,6 @@
 .bg-navy {
   background-color: rgb(37, 50, 64);
 }
-.bg-green {
-  background-color: rgb(184, 255, 241);
-}
-.bg-lightgreen {
-  background-color: rgb(231 255 250) !important;
-}
 .schemHover:hover {
   background-color: rgb(133, 203, 247);
   cursor: pointer;

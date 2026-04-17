@@ -3,7 +3,6 @@ import "./App.css";
 import "visiojs/dist/visiojs.css"; // Import VisioJS styles
 // import { startupSchematic } from "./startupSchematic.js";
 import pako from "pako";
-import "bootstrap/dist/css/bootstrap.min.css";
 import { VisioJSSchematic } from "./VisioJSSchematic.jsx";
 import { ComponentAdjuster } from "./ComponentAdjuster.jsx";
 import { FreqAdjusters } from "./FreqAdjusters.jsx";
@@ -25,6 +24,9 @@ import Snackbar from "@mui/material/Snackbar";
 import SnackbarContent from "@mui/material/SnackbarContent";
 import Button from "@mui/material/Button";
 import Grid from "@mui/material/Grid";
+import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
 
 /** Shape indices in initialSchematic: inductor 3, resistor 4, capacitor 5 */
 const initialComponents = {
@@ -297,19 +299,16 @@ function App() {
       <SnackbarError />
       <SnackbarUnsolvable />
       <NavBar stateToURL={stateToURL} />
-      <div className="w-100 p-2 bg-green pb-5" key="wrapper">
-        {/* <div className="container-xl" key="topContainer"> */}
-        <Container maxWidth="xl" sx={{ px: { xs: 0, sm: 2 } }}>
-          <div className="row">
-            <div className="col">
-              <p className="my-0">
-                This free online circuit solver tool can calculate the transfer function of circuits built from resistors, capacitors, inductors and op-amps. The user can quickly
-                explore different topologies and find their Laplace transform
-              </p>
-            </div>
-          </div>
-          <div className="row shadow-sm rounded bg-lightgreen my-2 py-0" id="schematic">
-            <div className="col-12">
+      <Box key="wrapper" sx={{ width: "100%", pt: 1, pb: 5, px: 2, backgroundColor: "rgb(184, 255, 241)" }}>
+        <Container maxWidth="xl" disableGutters>
+          <Box>
+            <Typography component="p" sx={{ my: 0 }}>
+              This free online circuit solver tool can calculate the transfer function of circuits built from resistors, capacitors, inductors and op-amps. The user can quickly
+              explore different topologies and find their Laplace transform
+            </Typography>
+          </Box>
+          <Paper elevation={1} sx={{ my: 2, p: 1, borderRadius: 1, backgroundColor: "rgb(231 255 250)" }} id="schematic">
+            <Box>
               <VisioJSSchematic
                 schematicApiRef={schematicRef}
                 setResults={setResults}
@@ -320,12 +319,12 @@ function App() {
                 setFullyConnectedComponents={setFullyConnectedComponents}
                 setSchematicComponents={setSchematicComponents}
               />
-            </div>
-            <div className="col-12">
+            </Box>
+            <Box>
               <ComponentAdjuster componentValues={componentValues} setComponentValues={setComponentValues} schematicComponents={schematicComponents} schematicRef={schematicRef} />
-            </div>
-          </div>
-          <div className="row shadow-sm rounded bg-lightgreen my-2 py-3" id="schematic">
+            </Box>
+          </Paper>
+          <Paper elevation={1} sx={{ my: 2, p: 1, borderRadius: 1, backgroundColor: "rgb(231 255 250)" }} id="schematic">
             <ChoseTF
               setResults={setResults}
               nodes={nodes}
@@ -336,9 +335,9 @@ function App() {
             {results.text != "" && (
               <>
                 <DisplayMathML title="Laplace Transform" textResult={results.text} mathML={results.mathML} caclDone={results.text != ""} />
-                <div className="col-12">
+                <Box>
                   <MyChart freq_new={freq_new} mag_new={mag_new} phase_new={phase_new} hasResults={results.text !== ""} />
-                </div>
+                </Box>
                 <FreqAdjusters settings={settings} setSettings={setSettings} />
                 <DisplayMathML title="Laplace Transform (numeric)" textResult={numericResults.numericText} mathML={numericResults.numericML} caclDone={results.text != ""} />
 
@@ -360,15 +359,15 @@ function App() {
                 )}
               </>
             )}
-          </div>
-          <div key="releaseNotes" className="row my-2 py-1">
+          </Paper>
+          <Box key="releaseNotes" sx={{ my: 2, py: 1 }}>
             <ReleaseNotes />
-          </div>
-          <div key="comments" className="row my-2 py-1 shadow-sm rounded bg-lightgreen">
+          </Box>
+          <Paper key="comments" elevation={1} sx={{ my: 2, py: 1, borderRadius: 1, backgroundColor: "rgb(231 255 250)" }}>
             {!import.meta.env.DEV && <Comments website-id="12350" page-id="7" />}
-          </div>
+          </Paper>
         </Container>
-      </div>
+      </Box>
       <Footer />
     </>
   );

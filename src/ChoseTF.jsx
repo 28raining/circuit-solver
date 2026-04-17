@@ -56,7 +56,7 @@ export function ChoseTF({ setResults, nodes, fullyConnectedComponents, component
   // componentValuesSolved is keyed by SymPy symbol; passed through to build_and_solve_mna / subs
   // console.log("componentValuesSolved", componentValuesSolved, fullyConnectedComponents);
   return (
-    <Grid container spacing={1} sx={{ mt: 1 }}>
+    <Grid container spacing={1}>
       {drivers.length == 0 || probes.length == 0 ? (
         <Box sx={{ color: "red" }}>
           <p>

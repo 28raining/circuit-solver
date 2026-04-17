@@ -55,7 +55,7 @@ export function ComponentAdjuster({ componentValues, setComponentValues, schemat
 
         return (
           <Grid size={3} key={key}>
-            <Card sx={{ p: 1, m: 1, width: "100%" }}>
+            <Card sx={{ p: 1, width: "100%" }}>
               <Stack direction="row" spacing={0} alignItems="center">
                 <LabelField shapeId={Number(key)} sympyName={sympyName} onCommit={commitLabel} />
 
