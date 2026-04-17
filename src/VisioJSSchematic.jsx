@@ -212,7 +212,7 @@ export function VisioJSSchematic({ schematicApiRef, setResults, setNodes, setCom
   allowedToAdd["iin"] = !hasVin && !hasIin;
   allowedToAdd["vprobe"] = Object.values(oldComponents).filter((c) => c.type == "vprobe").length < 2;
   return (
-    <Grid container spacing={1} sx={{ mt: 1 }}>
+    <Grid container spacing={1}>
       <Grid container size={{ xs: 12, sm: 10 }} columns={{ xs: 3, md: 9 }}>
         {Object.keys(addShapes).map((key) => {
           const shape = { ...addShapes[key] };

@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import CssBaseline from "@mui/material/CssBaseline";
 import App from "./App.jsx";
 
 // //fixme - go back to strict mode
@@ -9,4 +10,9 @@ import App from "./App.jsx";
 //   </StrictMode>,
 // )
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(
+  <>
+    <CssBaseline />
+    <App />
+  </>,
+);

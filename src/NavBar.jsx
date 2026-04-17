@@ -42,8 +42,8 @@ export function NavBar({ stateToURL }) {
         />
       </Snackbar>
       <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static" sx={{ backgroundColor: "rgb(37, 50, 64)", py: 1 }}>
-          <Toolbar style={{ minHeight: 0 }}>
+        <AppBar position="static" elevation={0} sx={{ backgroundColor: "rgb(37, 50, 64)", width: "100%", m: 0 }}>
+          <Toolbar disableGutters sx={{ minHeight: 0, px: 2 }}>
             <img src={CircuitSolverSVG} alt="Smith Chart" width="30" height="30" style={{ marginRight: "12px" }} />
             <Typography variant="h6" component="div" sx={{ fontWeight: "bold", display: { xs: "none", sm: "block" } }}>
               ONLINE CIRCUIT SOLVER

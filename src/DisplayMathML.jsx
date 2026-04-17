@@ -4,6 +4,7 @@ import { MathMLToLaTeX } from "mathml-to-latex";
 import { useState } from "react";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
+import Link from "@mui/material/Link";
 
 function DangerousSetIn({ mathMLString }) {
   return <div style={{ textAlign: "center" }} dangerouslySetInnerHTML={{ __html: mathMLString }} />;
@@ -21,9 +22,9 @@ export function DisplayMathML({ title, mathML, textResult, caclDone }) {
           message={
             <>
               LaTeX copied to your clipboard. Here's a free online latex editor:
-              <a className="text-white" href="https://latexeditor.lagrida.com/" target="_blank">
+              <Link href="https://latexeditor.lagrida.com/" target="_blank" rel="noreferrer" color="inherit" underline="always">
                 https://latexeditor.lagrida.com/
-              </a>
+              </Link>
             </>
           }
         />
@@ -34,9 +35,9 @@ export function DisplayMathML({ title, mathML, textResult, caclDone }) {
           message={
             <>
               MathML copied to your clipboard. Here's a free online MathML editor:
-              <a className="text-white" href="https://codepen.io/bqlou/pen/yOgbmb" target="_blank">
+              <Link href="https://codepen.io/bqlou/pen/yOgbmb" target="_blank" rel="noreferrer" color="inherit" underline="always">
                 https://codepen.io/bqlou/pen/yOgbmb
-              </a>
+              </Link>
             </>
           }
         />
