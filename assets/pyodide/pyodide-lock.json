@@ -1,0 +1,32 @@
+{
+  "info": {
+    "abi_version": "2026_0",
+    "arch": "wasm32",
+    "platform": "emscripten_5_0_3",
+    "python": "3.14.0"
+  },
+  "packages": {
+    "mpmath": {
+      "depends": [],
+      "file_name": "mpmath-1.4.1-py3-none-any.whl",
+      "imports": ["mpmath"],
+      "install_dir": "site",
+      "name": "mpmath",
+      "package_type": "package",
+      "sha256": "6baa44a54e91b801cfd14a929fbdcb4e2b88b401676526af33345be9313cdd6e",
+      "unvendored_tests": true,
+      "version": "1.4.1"
+    },
+    "sympy": {
+      "depends": ["mpmath"],
+      "file_name": "sympy-1.14.0-py3-none-any.whl",
+      "imports": ["isympy", "sympy"],
+      "install_dir": "site",
+      "name": "sympy",
+      "package_type": "package",
+      "sha256": "fcb48f976c749930ca23a12eb8a89d3950c126920b2a5b67fd26b89e59cfb654",
+      "unvendored_tests": true,
+      "version": "1.14.0"
+    }
+  }
+}
