@@ -1,18 +1,14 @@
-// src/pyodideLoader.js
-import { loadPyodide, version as pyodideVersion } from "pyodide";
+import { loadPyodide } from "pyodide";
+
+const pyodideIndexUrl = `${import.meta.env.BASE_URL}assets/pyodide/`;
 
 export async function initPyodideAndSympy() {
   const pyodide = await loadPyodide({
-    indexURL: `https://cdn.jsdelivr.net/pyodide/v${pyodideVersion}/full/`,
+    indexURL: pyodideIndexUrl,
   });
 
-  //There's a MathML issue about using 'fenced' syntax which is fixed in Sympmy 1.13.4. However, we only get 1.13.3
-
-  // await pyodide.loadPackage("micropip");
-  // const micropip = pyodide.pyimport("micropip");
-  // await micropip.install('sympy');
-  await pyodide.loadPackage("sympy");
-  var initStr = `
+  await pyodide.loadPackage(["mpmath", "sympy"]);
+  const initStr = `
 from sympy import Matrix, symbols, simplify, Abs, I, fraction, solve, arg, pi, lambdify
 from sympy.printing.mathml import mathml
 import math

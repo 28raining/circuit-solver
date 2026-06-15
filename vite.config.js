@@ -5,13 +5,16 @@ import svgr from "vite-plugin-svgr";
 
 // https://vite.dev/config/
 export default defineConfig({
+  optimizeDeps: {
+    exclude: ["pyodide"],
+  },
   test: {
     browser: {
       enabled: true,
       provider: "playwright",
       instances: [
         {
-          browser: "chromium", // or 'firefox', 'webkit'
+          browser: "chromium",
         },
       ],
     },
@@ -20,8 +23,8 @@ export default defineConfig({
     react(),
     svgr(),
     // visualizer({
-    //   open: true, // Automatically open the report in browser
-    //   filename: "dist/bundle-report.html", // Report file location
+    //   open: true,
+    //   filename: "dist/bundle-report.html",
     //   gzipSize: true,
     //   brotliSize: true,
     // }),

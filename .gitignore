@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 */__screenshots__/*
+public/assets/pyodide/
+tmp-pyodide-test/

@@ -1,12 +1,3 @@
-// import { loadPyodide } from "pyodide";
-// import { initPyodideAndSympy } from "./pyodideLoader";
-
-//FIXME - remove once https://github.com/sympy/sympy/pull/27137 is merged into pyodide
-function removeFenced(mathml) {
-  // return mathml;
-  return mathml.replaceAll(/<mfenced>/g, "<mrow><mo>(</mo>").replaceAll(/<\/mfenced>/g, "<mo>)</mo></mrow>"); // replace <mfenced> with <mo>{</mo>
-}
-
 /** SymPy symbol names used in the MNA matrix (RLC + VCVS + VCIS). */
 function collectMnaSymbolNames(elementMap) {
   const set = new Set();
@@ -46,7 +37,7 @@ str(result_simplified), mathml(result_simplified, printer='presentation')
   try {
     const [textResult, mathml] = await pyodide.runPythonAsync(sympyString);
 
-    return [textResult, removeFenced(mathml)];
+    return [textResult, mathml];
   } catch (err) {
     console.log("Solving MNA matrix failed with this error:", err);
     return ["", ""];
@@ -201,7 +192,7 @@ str(bilinear_simp), mathml(bilinear_simp, printer='presentation')
   const [res, mathml] = await solver.runPythonAsync(sympyString);
   // console.log("bilinear transform", res, mathml);
 
-  return [res, removeFenced(mathml)];
+  return [res, mathml];
 }
 
 export async function new_calculate_tf(pyodide, fRange, numSteps, componentValuesSolved, setErrorSnackbar) {
@@ -284,7 +275,7 @@ phase_list = [float(x) for x in phase_array]
       freq_new: freq,
       mag_new: magArray,
       phase_new: phaseArray,
-      numericML: removeFenced(String(numericML)),
+      numericML: String(numericML),
       numericText: String(numericText).replaceAll("**", "^"),
     };
   } catch (err) {

@@ -363,7 +363,7 @@ function App() {
           <Box key="releaseNotes" sx={{ my: 2, py: 1 }}>
             <ReleaseNotes />
           </Box>
-          <Paper key="comments" elevation={1} sx={{ my: 2, py: 1, borderRadius: 1, backgroundColor: "rgb(231 255 250)" }}>
+          <Paper key="comments" elevation={1} sx={{ my: 2, p: 1, borderRadius: 1, backgroundColor: "rgb(231 255 250)" }}>
             {!import.meta.env.DEV && <Comments website-id="12350" page-id="7" />}
           </Paper>
         </Container>
